@@ -4,6 +4,7 @@ from anthropic import Anthropic
 
 # Load environment variables
 load_dotenv()  # This loads the .env file
+
 from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class CryptoTradingBot:
     def __init__(self):
-        # Initialize clients
+        # Initialize clients using proper environment variable names
         self.anthropic = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
         self.trading_client = TradingClient(
             api_key=os.getenv('ALPACA_API_KEY'),
@@ -35,7 +36,7 @@ class CryptoTradingBot:
             paper=True
         )
         
-        # Alpaca crypto historical data client
+        # Alpaca crypto historical data client (if needed, pass API keys here too)
         self.crypto_client = CryptoHistoricalDataClient()
         
         # Alpha Vantage setup for additional data
@@ -105,28 +106,28 @@ class CryptoTradingBot:
         try:
             prompt = f"""Analyze Bitcoin trading conditions with the following data:
             
-            Technical Indicators:
-            {json.dumps(technical_data, indent=2)}
+Technical Indicators:
+{json.dumps(technical_data, indent=2)}
             
-            Consider these crypto-specific factors:
-            1. 24/7 trading nature
-            2. High volatility
-            3. Global market influence
-            4. On-chain metrics implications
+Consider these crypto-specific factors:
+1. 24/7 trading nature
+2. High volatility
+3. Global market influence
+4. On-chain metrics implications
             
-            Please analyze this data and provide:
-            1. Current market condition assessment
-            2. Key support and resistance levels
-            3. Trend direction and strength
-            4. Volatility analysis
-            5. Specific trading recommendation (BUY/SELL/HOLD)
-            6. Position sizing recommendation (1-100%)
-            7. Stop loss and take profit levels (as percentages)
+Please analyze this data and provide:
+1. Current market condition assessment
+2. Key support and resistance levels
+3. Trend direction and strength
+4. Volatility analysis
+5. Specific trading recommendation (BUY/SELL/HOLD)
+6. Position sizing recommendation (1-100%)
+7. Stop loss and take profit levels (as percentages)
             
-            Format your response as JSON with these exact keys:
-            market_condition, support_levels, resistance_levels, trend, volatility, recommendation, 
-            position_size, stop_loss_pct, take_profit_pct, reasoning
-            """
+Format your response as JSON with these exact keys:
+market_condition, support_levels, resistance_levels, trend, volatility, recommendation, 
+position_size, stop_loss_pct, take_profit_pct, reasoning
+"""
             
             message = await asyncio.to_thread(
                 self.anthropic.messages.create,

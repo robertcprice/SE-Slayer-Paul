@@ -1,199 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NASDAQ Trading Bot Dashboard</title>
-    <script 
-src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
-    <script 
-src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .full-width {
-            grid-column: 1 / -1;
-        }
-        
-        .analysis-feed {
-            height: 300px;
-            overflow-y: auto;
-        }
-        
-        .trades-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .trades-table th, .trades-table td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .metrics {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-        }
-        
-        .metric-card {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        
-        .metric-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .metric-label {
-            font-size: 14px;
-            color: #7f8c8d;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NASDAQ Trading Bot Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .analysis-feed {
+      height: 300px;
+      overflow-y: auto;
+    }
+    
+    .trades-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .trades-table th, .trades-table td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    
+    .metric-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    
+    .metric-label {
+      font-size: 14px;
+      color: #7f8c8d;
+    }
+  </style>
 </head>
 <body>
-    <div class="dashboard">
-        <div class="card full-width">
-            <h2>Real-time Trading Activity</h2>
-            <canvas id="tradingChart"></canvas>
-        </div>
-        
-        <div class="card">
-            <h2>Claude Opus Analysis Feed</h2>
-            <div class="analysis-feed" id="analysisFeed"></div>
-        </div>
-        
-        <div class="card">
-            <h2>Recent Trades</h2>
-            <table class="trades-table" id="tradesTable">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Symbol</th>
-                        <th>Action</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        
-        <div class="card full-width">
-            <h2>Performance Metrics</h2>
-            <div class="metrics" id="metricsContainer"></div>
-        </div>
-        
-        <div class="card full-width">
-            <h2>Backtest Results</h2>
-            <canvas id="backtestChart"></canvas>
-        </div>
+  <div class="dashboard">
+    <div class="card full-width">
+      <h2>Real-time Trading Activity</h2>
+      <canvas id="tradingChart"></canvas>
     </div>
+    
+    <div class="card">
+      <h2>Claude Opus Analysis Feed</h2>
+      <div class="analysis-feed" id="analysisFeed"></div>
+    </div>
+    
+    <div class="card">
+      <h2>Recent Trades</h2>
+      <table class="trades-table" id="tradesTable">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Symbol</th>
+            <th>Action</th>
+            <th>Price</th>
+            <th>Quantity</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    
+    <div class="card full-width">
+      <h2>Performance Metrics</h2>
+      <div class="metrics" id="metricsContainer"></div>
+    </div>
+    
+    <div class="card full-width">
+      <h2>Backtest Results</h2>
+      <canvas id="backtestChart"></canvas>
+    </div>
+  </div>
 
-    <script>
-        let tradingChart, backtestChart;
-        let ws;
+  <script>
+    let tradingChart, backtestChart;
+    let ws;
 
-        function initializeCharts() {
-            // Trading Chart
-            const tradingCtx = 
-document.getElementById('tradingChart').getContext('2d');
-            tradingChart = new Chart(tradingCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: []
-                },
-                options: {
-                    responsive: true,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Price and Trading Actions'
-                        }
-                    }
-                }
-            });
-
-            // Backtest Chart
-            const backtestCtx = 
-document.getElementById('backtestChart').getContext('2d');
-            backtestChart = new Chart(backtestCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Strategy Performance',
-                        data: [],
-                        borderColor: '#2ecc71',
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Strategy Performance Over Time'
-                        }
-                    }
-                }
-            });
+    // Initialize the charts for trading activity and backtest results.
+    function initializeCharts() {
+      // Trading Chart
+      const tradingCtx = document.getElementById('tradingChart').getContext('2d');
+      tradingChart = new Chart(tradingCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: []
+        },
+        options: {
+          responsive: true,
+          interaction: { intersect: false, mode: 'index' },
+          plugins: {
+            title: { display: true, text: 'Price and Trading Actions' }
+          }
         }
+      });
 
-        function updateAnalysisFeed(analysis) {
-            const feed = document.getElementById('analysisFeed');
-            const entry = document.createElement('div');
-            entry.className = 'analysis-entry';
-            entry.innerHTML = `
-                <strong>${moment().format('HH:mm:ss')}</strong>
-                <p>${analysis.reasoning}</p>
-            `;
-            feed.insertBefore(entry, feed.firstChild);
+      // Backtest Chart
+      const backtestCtx = document.getElementById('backtestChart').getContext('2d');
+      backtestChart = new Chart(backtestCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Strategy Performance',
+            data: [],
+            borderColor: '#2ecc71',
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: { display: true, text: 'Strategy Performance Over Time' }
+          }
         }
+      });
+    }
 
-        function updateTradesTable(trades) {
-            const tbody = document.querySelector('#tradesTable tbody');
-            tbody.innerHTML = '';
-            
-            trades.slice(-10).forEach(trade => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${moment(trade.timestamp).format('HH:mm:ss')}</td>
-                    <td>${trade.symbol}</td>
-                    <td>${trade.action}</td>
-                    <td>$${trade.price.toFixed(2)}</td>
-                    <td>${trade.quantity}</td>
-                `;
-                tbody.appendChild(row);
-            });
+    // Update the analysis feed section with the latest analysis.
+    function updateAnalysisFeed(analysis) {
+      const feed = document.getElementById('analysisFeed');
+      const entry = document.createElement('div');
+      entry.className = 'analysis-entry';
+      entry.innerHTML = `
+        <strong>${moment().format('HH:mm:ss')}</strong>
+        <p>${analysis.reasoning}</p>
+      `;
+      feed.insertBefore(entry, feed.firstChild);
+    }
+
+    // Update the recent trades table with the latest trades.
+    function updateTradesTable(trades) {
+      const tbody = document.querySelector('#tradesTable tbody');
+      tbody.innerHTML = '';
+      
+      trades.slice(-10).forEach(trade => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${moment(trade.timestamp).format('HH:mm:ss')}</td>
+          <td>${trade.symbol}</td>
+          <td>${trade.action}</td>
+          <td>$${trade.price.toFixed(2)}</td>
+          <td>${trade.quantity}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Establish a WebSocket connection with reconnection logic.
+    function connectWebSocket() {
+      ws = new WebSocket("ws://" + window.location.host + "/ws");
+
+      ws.onopen = () => {
+        console.log("WebSocket connection established.");
+      };
+
+      ws.onmessage = (event) => {
+        const update = JSON.parse(event.data);
+        if (update.analysis_cache && update.analysis_cache.BTC) {
+          updateAnalysisFeed(update.analysis_cache.BTC);
         }
+        updateTradesTable(update.trades_history);
+        console.log("Received update:", update);
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+      };
+
+      ws.onclose = () => {
+        console.warn("WebSocket closed. Attempting to reconnect in 5 seconds...");
+        setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    // Initialize charts and connect the WebSocket once the DOM is ready.
+    document.addEventListener("DOMContentLoaded", () => {
+      initializeCharts();
+      connectWebSocket();
+    });
+  </script>
+</body>
+</html>
