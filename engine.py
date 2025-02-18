@@ -5,6 +5,10 @@ from anthropic import Anthropic
 # Load environment variables
 load_dotenv()  # This loads the .env file
 
+# Configuration for update intervals (in seconds)
+WEB_UPDATE_INTERVAL = int(os.getenv('WEB_UPDATE_INTERVAL', 300))       # default: 5 minutes
+TRADING_CYCLE_INTERVAL = int(os.getenv('TRADING_CYCLE_INTERVAL', 900))   # default: 15 minutes
+
 from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
@@ -49,7 +53,6 @@ class CryptoTradingBot:
         self.trades_history = []
         
     async def get_technical_indicators(self):
-        """Get comprehensive technical analysis for Bitcoin."""
         try:
             # Get historical data from Alpaca
             request_params = CryptoBarsRequest(
@@ -76,24 +79,38 @@ class CryptoTradingBot:
             
             # Bollinger Bands
             bb = ta.bbands(df['close'])
-            df['BB_Upper'] = bb['BBU_20_2.0']
-            df['BB_Middle'] = bb['BBM_20_2.0']
-            df['BB_Lower'] = bb['BBL_20_2.0']
+            logger.info(f"Bollinger Bands columns: {bb.columns.tolist()}")
+
+            # Extract Bollinger Bands columns based on substring matching.
+            bb_upper_col = next((col for col in bb.columns if "BBU" in col), None)
+            bb_middle_col = next((col for col in bb.columns if "BBM" in col), None)
+            bb_lower_col = next((col for col in bb.columns if "BBL" in col), None)
+            if not (bb_upper_col and bb_middle_col and bb_lower_col):
+                raise KeyError(f"Expected Bollinger Bands columns not found in: {bb.columns.tolist()}")
+            
+            df['BB_Upper'] = bb[bb_upper_col]
+            df['BB_Middle'] = bb[bb_middle_col]
+            df['BB_Lower'] = bb[bb_lower_col]
             
             # Volume analysis
             df['Volume_SMA'] = ta.sma(df['volume'], length=20)
             
+            # Helper function to convert keys to strings
+            def convert_keys_to_str(d):
+                return {str(k): v for k, v in d.items()}
+            
+            # Use tail(50) for internal use (e.g., charting) but analysis prompt will trim this data.
             return {
-                'price_data': df['close'].tail(50).to_dict(),
-                'volume_data': df['volume'].tail(50).to_dict(),
+                'price_data': convert_keys_to_str(df['close'].tail(50).to_dict()),
+                'volume_data': convert_keys_to_str(df['volume'].tail(50).to_dict()),
                 'indicators': {
-                    'sma_20': df['SMA_20'].tail(50).to_dict(),
-                    'sma_50': df['SMA_50'].tail(50).to_dict(),
-                    'macd': df['MACD'].tail(50).to_dict(),
-                    'macd_signal': df['MACD_Signal'].tail(50).to_dict(),
-                    'rsi': df['RSI'].tail(50).to_dict(),
-                    'bb_upper': df['BB_Upper'].tail(50).to_dict(),
-                    'bb_lower': df['BB_Lower'].tail(50).to_dict()
+                    'sma_20': convert_keys_to_str(df['SMA_20'].tail(50).to_dict()),
+                    'sma_50': convert_keys_to_str(df['SMA_50'].tail(50).to_dict()),
+                    'macd': convert_keys_to_str(df['MACD'].tail(50).to_dict()),
+                    'macd_signal': convert_keys_to_str(df['MACD_Signal'].tail(50).to_dict()),
+                    'rsi': convert_keys_to_str(df['RSI'].tail(50).to_dict()),
+                    'bb_upper': convert_keys_to_str(df['BB_Upper'].tail(50).to_dict()),
+                    'bb_lower': convert_keys_to_str(df['BB_Lower'].tail(50).to_dict())
                 }
             }
             
@@ -102,45 +119,69 @@ class CryptoTradingBot:
             return None
 
     async def analyze_market_conditions(self, technical_data):
-        """Get trading analysis from Claude Opus."""
         try:
-            prompt = f"""Analyze Bitcoin trading conditions with the following data:
-            
-Technical Indicators:
-{json.dumps(technical_data, indent=2)}
-            
-Consider these crypto-specific factors:
-1. 24/7 trading nature
-2. High volatility
-3. Global market influence
-4. On-chain metrics implications
-            
-Please analyze this data and provide:
-1. Current market condition assessment
-2. Key support and resistance levels
-3. Trend direction and strength
-4. Volatility analysis
-5. Specific trading recommendation (BUY/SELL/HOLD)
-6. Position sizing recommendation (1-100%)
-7. Stop loss and take profit levels (as percentages)
-            
-Format your response as JSON with these exact keys:
-market_condition, support_levels, resistance_levels, trend, volatility, recommendation, 
-position_size, stop_loss_pct, take_profit_pct, reasoning
-"""
+            # Function to trim a dictionary to only its last num_points items
+            def trim_data(d, num_points=20):
+                if isinstance(d, dict):
+                    keys = list(d.keys())
+                    return {k: d[k] for k in keys[-num_points:]}
+                return d
+
+            # Trim the data in technical_data to reduce prompt size.
+            trimmed_data = {}
+            for key, value in technical_data.items():
+                if isinstance(value, dict):
+                    trimmed_data[key] = trim_data(value, num_points=20)
+                elif isinstance(value, list):
+                    trimmed_data[key] = value[-20:]
+                else:
+                    trimmed_data[key] = value
+
+            # Build a compact prompt in Anthropic’s conversational format.
+            prompt = (
+                f"Human: Analyze the following market data:\n{json.dumps(trimmed_data)}\n\n"
+                "Consider these crypto-specific factors:\n"
+                "1. 24/7 trading nature\n"
+                "2. High volatility\n"
+                "3. Global market influence\n"
+                "4. On-chain metrics implications\n\n"
+                "Please analyze this data and provide:\n"
+                "1. Current market condition assessment\n"
+                "2. Key support and resistance levels\n"
+                "3. Trend direction and strength\n"
+                "4. Volatility analysis\n"
+                "5. Specific trading recommendation (BUY/SELL/HOLD)\n"
+                "6. Position sizing recommendation (1-100%)\n"
+                "7. Stop loss and take profit levels (as percentages)\n\n"
+                "Format your response as JSON with these exact keys:\n"
+                "market_condition, support_levels, resistance_levels, trend, volatility, recommendation, "
+                "position_size, stop_loss_pct, take_profit_pct, reasoning\n\n"
+                "Assistant:"
+            )
             
             message = await asyncio.to_thread(
                 self.anthropic.messages.create,
                 model="claude-3-opus-20240229",
-                max_tokens=1024,
+                max_tokens=512,
                 messages=[{
                     "role": "user",
                     "content": prompt
                 }]
             )
             
-            # Parse JSON response
-            analysis = json.loads(message.content[0].text)
+            # Log the raw response for debugging.
+            raw_response = message.content[0].text
+            logger.info(f"Anthropic raw response: {raw_response}")
+            
+            # Extract JSON starting at the first "{" character.
+            json_start = raw_response.find('{')
+            if json_start == -1:
+                logger.error("No JSON found in Anthropic response")
+                return None
+            json_str = raw_response[json_start:]
+            
+            # Parse JSON using strict=False to allow unescaped control characters.
+            analysis = json.loads(json_str, strict=False)
             self.analysis_cache['BTC'] = analysis
             return analysis
             
@@ -149,9 +190,9 @@ position_size, stop_loss_pct, take_profit_pct, reasoning
             return None
 
     async def execute_trade(self, analysis):
-        """Execute crypto trade based on analysis."""
         try:
-            if analysis['recommendation'] in ['BUY', 'SELL']:
+            # Only execute trade if recommendation is BUY or SELL and position_size is nonzero.
+            if analysis['recommendation'] in ['BUY', 'SELL'] and analysis.get('position_size', 0) > 0:
                 # Calculate position size
                 account = self.trading_client.get_account()
                 buying_power = float(account.buying_power)
@@ -198,7 +239,6 @@ position_size, stop_loss_pct, take_profit_pct, reasoning
             return None
 
     async def run_trading_cycle(self):
-        """Run a complete trading cycle."""
         while True:
             try:
                 # Get technical data
@@ -210,15 +250,14 @@ position_size, stop_loss_pct, take_profit_pct, reasoning
                         # Execute trade if recommended
                         await self.execute_trade(analysis)
                 
-                # Wait before next cycle - shorter for crypto due to volatility
-                await asyncio.sleep(900)  # 15 minutes between cycles
+                # Wait for the configured trading cycle interval (default 15 minutes)
+                await asyncio.sleep(TRADING_CYCLE_INTERVAL)
                     
             except Exception as e:
                 logger.error(f"Error in trading cycle: {str(e)}")
                 await asyncio.sleep(60)  # Wait if error occurs
 
     def get_performance_metrics(self):
-        """Calculate performance metrics for backtesting display."""
         try:
             account = self.trading_client.get_account()
             
@@ -272,19 +311,19 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     bot = CryptoTradingBot()
     
-    # Start trading cycle
+    # Start the trading cycle as a background task.
     trading_task = asyncio.create_task(bot.run_trading_cycle())
     
     try:
         while True:
-            # Send updates to frontend
+            # Send updates to the frontend at the configured interval (default 5 minutes)
             update = {
                 'analysis_cache': bot.analysis_cache,
                 'trades_history': bot.trades_history,
                 'performance': bot.get_performance_metrics()
             }
             await websocket.send_json(update)
-            await asyncio.sleep(5)
+            await asyncio.sleep(WEB_UPDATE_INTERVAL)
             
     except Exception as e:
         logger.error(f"WebSocket error: {str(e)}")
