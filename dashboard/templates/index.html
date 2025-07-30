@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Trading Bot Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <h1 class="text-3xl font-bold mb-2">AI Trading Dashboard</h1>
+        <div class="mb-4 text-green-400 font-semibold">
+            Best Asset: {{ best_asset }} (P&L: ${{ '{:,.2f}'.format(best_pnl) if best_pnl else '--' }})
+        </div>
+        <div class="grid md:grid-cols-2 gap-8">
+            {% for asset in assets %}
+            <div class="bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-2">{{ asset }}</h2>
+                <div class="mb-4">
+                    <canvas id="{{ asset }}-chart" height="120"></canvas>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="stat">P&L: <span id="{{ asset }}-pnl">$--</span></div>
+                    <div class="stat">Win Rate: <span id="{{ asset }}-winrate">--%</span></div>
+                    <div class="stat">Sharpe: <span id="{{ asset }}-sharpe">--</span></div>
+                    <div class="stat">Drawdown: <span id="{{ asset }}-drawdown">--</span></div>
+                </div>
+                <div id="{{ asset }}-stats" class="mb-3 text-sm text-gray-400"></div>
+                <div class="mb-3">
+                    <h3 class="font-semibold mb-1">📝 Recent Trades</h3>
+                    <ul id="{{ asset }}-feed" class="text-xs list-disc pl-5"></ul>
+                </div>
+                <div class="mb-3 card p-3 bg-gray-900 rounded-xl">
+                    <h3 class="font-semibold">🤖 Trading Style Reflection</h3>
+                    <pre id="{{ asset }}-reflection" class="text-green-200 mb-2"></pre>
+                    <div class="text-green-400"><strong>Improvements:</strong> <span id="{{ asset }}-improvements"></span></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <script src="/static/main.js"></script>
+</body>
+</html>

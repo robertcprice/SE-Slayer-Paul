@@ -1,0 +1,70 @@
+/* dashboard/static/style.css */
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #151c28;
+    color: #e4e6ed;
+    margin: 0;
+    padding: 0;
+}
+header {
+    background: #222a38;
+    padding: 24px 0;
+    text-align: center;
+    border-bottom: 1px solid #2b3551;
+}
+header h1 {
+    margin: 0;
+    font-size: 2.4rem;
+    font-weight: bold;
+    color: #7ae7ff;
+    letter-spacing: 1.5px;
+}
+main {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+.asset-section {
+    margin-bottom: 48px;
+    background: #232d41;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(36,55,95,0.16);
+    padding: 28px 32px;
+}
+.asset-section h2 {
+    color: #97e7ff;
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+.trade-feed {
+    margin-top: 8px;
+}
+.trade-box {
+    background: #192134;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    box-shadow: 0 2px 6px rgba(40,54,85,0.12);
+    border-left: 3px solid #7ae7ff;
+}
+.timestamp {
+    font-size: 0.95em;
+    color: #7ae7ff;
+    opacity: 0.7;
+}
+.ai-summary {
+    margin-top: 4px;
+    font-size: 1.07em;
+    line-height: 1.5em;
+}
+pre {
+    color: #ddeaff;
+    background: #26324a;
+    border-radius: 7px;
+    padding: 7px 10px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+    font-size: 0.97em;
+}

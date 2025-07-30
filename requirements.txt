@@ -1,0 +1,12 @@
+alpaca-py>=0.17.0
+openai>=1.0.0
+fastapi
+uvicorn
+pandas
+pandas-ta
+python-dotenv
+jinja2
+httpx
+python-multipart
+plotly
+setuptools
