@@ -594,6 +594,66 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+
+  // System Reset Methods
+  async getAllTrades(): Promise<Trade[]> {
+    try {
+      return await db.select().from(trades).orderBy(desc(trades.timestamp));
+    } catch (error) {
+      console.error("Error fetching all trades:", error);
+      return [];
+    }
+  }
+
+  async getAllPositions(): Promise<Position[]> {
+    try {
+      return await db.select().from(positions).orderBy(desc(positions.openedAt));
+    } catch (error) {
+      console.error("Error fetching all positions:", error);
+      return [];
+    }
+  }
+
+  async getAllReflections(): Promise<AiReflection[]> {
+    try {
+      return await db.select().from(aiReflections).orderBy(desc(aiReflections.timestamp));
+    } catch (error) {
+      console.error("Error fetching all reflections:", error);
+      return [];
+    }
+  }
+
+  async getAllMarketData(): Promise<MarketData[]> {
+    try {
+      return await db.select().from(marketData).orderBy(desc(marketData.timestamp));
+    } catch (error) {
+      console.error("Error fetching all market data:", error);
+      return [];
+    }
+  }
+
+  async resetAllTradingData(): Promise<void> {
+    try {
+      console.log("🔄 Starting complete trading data reset...");
+      
+      // Delete all trading data in correct order (foreign key constraints)
+      await db.delete(backtestResults);
+      await db.delete(marketData);  
+      await db.delete(positions);
+      await db.delete(trades);
+      await db.delete(aiReflections);
+      await db.delete(aiDecisionLogs);
+      
+      console.log("✅ All trading data has been reset successfully");
+      
+      // Log to persistent file
+      await this.logToFile(this.tradingLogFile, "SYSTEM RESET - All trading data cleared");
+      
+    } catch (error) {
+      console.error("❌ Error resetting trading data:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

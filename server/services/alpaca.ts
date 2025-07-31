@@ -244,6 +244,35 @@ export class AlpacaClient {
       return [];
     }
   }
+
+  async closeAllPositions(): Promise<Position[]> {
+    try {
+      const positions = await this.getPositions();
+      const closedPositions: Position[] = [];
+      
+      for (const position of positions) {
+        try {
+          // Close position via DELETE request
+          await axios.delete(`${this.baseURL}/v2/positions/${position.symbol}`, {
+            headers: this.getHeaders()
+          });
+          
+          closedPositions.push(position);
+          console.log(`📤 Closed Alpaca position: ${position.symbol} (${position.qty} shares)`);
+          
+        } catch (error) {
+          console.error(`Failed to close position ${position.symbol}:`, error);
+        }
+      }
+      
+      console.log(`🔄 Closed ${closedPositions.length} positions in Alpaca account`);
+      return closedPositions;
+      
+    } catch (error) {
+      console.error('Failed to close all positions:', error);
+      throw error;
+    }
+  }
 }
 
 export const alpacaClient = new AlpacaClient();

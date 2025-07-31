@@ -20,6 +20,10 @@ export default function TradingDashboard() {
     color2: "#22d3ee",
   });
 
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showAlpacaResetDialog, setShowAlpacaResetDialog] = useState(false);
+  const [targetEquity, setTargetEquity] = useState("100000");
+
   const [isManualTradeOpen, setIsManualTradeOpen] = useState(false);
   const [manualTradeForm, setManualTradeForm] = useState({
     assetSymbol: "",
@@ -53,6 +57,64 @@ export default function TradingDashboard() {
       toast({
         title: "Trade Failed",
         description: error.message || "Failed to execute manual trade",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const exportAndResetMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/admin/export-and-reset", {
+        method: "POST",
+      });
+    },
+    onSuccess: (data) => {
+      // Download the exported data
+      const blob = new Blob([JSON.stringify(data.exportData, null, 2)], { 
+        type: 'application/json' 
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `trading-data-export-${data.timestamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Data Exported & Reset Complete",
+        description: "All trading data has been exported and reset successfully",
+      });
+      setShowResetDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Reset Failed",
+        description: error.message || "Failed to export and reset data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const alpacaResetMutation = useMutation({
+    mutationFn: async (targetEquity: string) => {
+      return await apiRequest("/api/admin/reset-alpaca-account", {
+        method: "POST",
+        body: JSON.stringify({ targetEquity: parseFloat(targetEquity) }),
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Alpaca Account Reset",
+        description: `Closed ${data.closedPositions} positions. Account reset completed.`,
+      });
+      setShowAlpacaResetDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Alpaca Reset Failed",
+        description: error.message || "Failed to reset Alpaca account",
         variant: "destructive",
       });
     },
@@ -179,24 +241,56 @@ export default function TradingDashboard() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Color Customizer - Moved to center top */}
-      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 glass-panel rounded-2xl p-4">
-        <div className="flex items-center space-x-3">
-          <span className="text-sm font-semibold uppercase tracking-wider">🎨 Theme</span>
-          <input
-            type="color"
-            value={colorConfig.color1}
-            onChange={(e) => setColorConfig(prev => ({ ...prev, color1: e.target.value }))}
-            className="w-8 h-8 rounded border-none cursor-pointer"
-          />
-          <input
-            type="color"
-            value={colorConfig.color2}
-            onChange={(e) => setColorConfig(prev => ({ ...prev, color2: e.target.value }))}
-            className="w-8 h-8 rounded border-none cursor-pointer"
-          />
-        </div>
+    <div className="min-h-screen relative">
+      {/* Gradient Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 pointer-events-none" />
+      
+      {/* Simple Theme Color Picker - Top Left */}
+      <div className="fixed top-4 left-4 z-50 flex gap-2">
+        <div
+          className="w-6 h-6 rounded cursor-pointer border-2 border-white/30 hover:border-white/60 transition-colors"
+          style={{ backgroundColor: colorConfig.color1 }}
+          onClick={() => {
+            const input = document.createElement('input');
+            input.type = 'color';
+            input.value = colorConfig.color1;
+            input.onchange = (e) => setColorConfig(prev => ({ ...prev, color1: (e.target as HTMLInputElement).value }));
+            input.click();
+          }}
+          title="Primary Color"
+        />
+        <div
+          className="w-6 h-6 rounded cursor-pointer border-2 border-white/30 hover:border-white/60 transition-colors"
+          style={{ backgroundColor: colorConfig.color2 }}
+          onClick={() => {
+            const input = document.createElement('input');
+            input.type = 'color';
+            input.value = colorConfig.color2;
+            input.onchange = (e) => setColorConfig(prev => ({ ...prev, color2: (e.target as HTMLInputElement).value }));
+            input.click();
+          }}
+          title="Accent Color"
+        />
+      </div>
+
+      {/* Reset Controls - Top Right */}
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <Button
+          onClick={() => setShowResetDialog(true)}
+          variant="outline"
+          size="sm"
+          className="bg-red-600/20 border-red-500/50 text-red-200 hover:bg-red-600/30"
+        >
+          Export & Reset All Data
+        </Button>
+        <Button
+          onClick={() => setShowAlpacaResetDialog(true)}
+          variant="outline"
+          size="sm"
+          className="bg-orange-600/20 border-orange-500/50 text-orange-200 hover:bg-orange-600/30"
+        >
+          Reset Alpaca Account
+        </Button>
       </div>
 
       {/* Header */}
@@ -326,6 +420,95 @@ export default function TradingDashboard() {
                   variant="outline"
                   onClick={() => setIsManualTradeOpen(false)}
                   className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Export & Reset Dialog */}
+      {showResetDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <Card className="w-full max-w-md mx-4 bg-red-950/90 border-red-500/50">
+            <CardHeader>
+              <CardTitle className="text-red-200">⚠️ Export & Reset All Data</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-red-200">
+                This will export all your trading data to a JSON file and then permanently delete:
+              </p>
+              <ul className="text-sm text-red-300 list-disc list-inside space-y-1">
+                <li>All trade history</li>
+                <li>All position records</li>
+                <li>All AI logs and reflections</li>
+                <li>All market data</li>
+                <li>All backtest results</li>
+                <li>All performance statistics</li>
+              </ul>
+              <p className="text-sm font-semibold text-red-200">
+                This action cannot be undone!
+              </p>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => exportAndResetMutation.mutate()}
+                  disabled={exportAndResetMutation.isPending}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                >
+                  {exportAndResetMutation.isPending ? "Processing..." : "Export & Reset"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowResetDialog(false)}
+                  className="flex-1"
+                  disabled={exportAndResetMutation.isPending}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Alpaca Reset Dialog */}
+      {showAlpacaResetDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <Card className="w-full max-w-md mx-4 bg-orange-950/90 border-orange-500/50">
+            <CardHeader>
+              <CardTitle className="text-orange-200">🔄 Reset Alpaca Paper Account</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-orange-200">
+                This will close all open positions in your Alpaca paper trading account and reset it to the target equity.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="targetEquity" className="text-orange-200">Target Equity ($)</Label>
+                <Input
+                  id="targetEquity"
+                  type="number"
+                  step="1000"
+                  placeholder="100000"
+                  value={targetEquity}
+                  onChange={(e) => setTargetEquity(e.target.value)}
+                  className="border-orange-500/50"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => alpacaResetMutation.mutate(targetEquity)}
+                  disabled={alpacaResetMutation.isPending}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700"
+                >
+                  {alpacaResetMutation.isPending ? "Resetting..." : "Reset Account"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAlpacaResetDialog(false)}
+                  className="flex-1"
+                  disabled={alpacaResetMutation.isPending}
                 >
                   Cancel
                 </Button>

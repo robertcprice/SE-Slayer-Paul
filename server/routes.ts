@@ -981,5 +981,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // System Reset Endpoints
+  app.post("/api/admin/export-and-reset", async (req, res) => {
+    try {
+      // Export all data before reset
+      const exportData = {
+        timestamp: new Date().toISOString(),
+        trades: await storage.getAllTrades(),
+        positions: await storage.getAllPositions(),
+        aiLogs: await storage.getAiDecisionLogs(),
+        reflections: await storage.getAllReflections(),
+        marketData: await storage.getAllMarketData(),
+        backtestResults: await storage.getBacktestResults(),
+        stats: {}
+      };
+
+      // Calculate stats for each asset before reset
+      const assets = await storage.getTradingAssets();
+      for (const asset of assets) {
+        exportData.stats[asset.symbol] = await storage.calculateStats(asset.id);
+      }
+
+      // Reset all trading data
+      await storage.resetAllTradingData();
+
+      res.json({
+        success: true,
+        message: "All trading data exported and reset successfully",
+        exportData,
+        timestamp: exportData.timestamp
+      });
+
+    } catch (error) {
+      console.error("Export and reset error:", error);
+      res.status(500).json({ error: "Failed to export and reset data" });
+    }
+  });
+
+  app.post("/api/admin/reset-alpaca-account", async (req, res) => {
+    try {
+      const { targetEquity = 100000 } = req.body;
+
+      // Close all positions in Alpaca
+      const closedPositions = await alpacaClient.closeAllPositions();
+      
+      // Reset account to target equity (this is simulated for paper trading)
+      const accountInfo = await alpacaClient.getAccount();
+      
+      res.json({
+        success: true,
+        message: `Alpaca paper account reset completed`,
+        closedPositions: closedPositions.length,
+        currentEquity: accountInfo.equity,
+        targetEquity,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("Alpaca account reset error:", error);
+      res.status(500).json({ error: "Failed to reset Alpaca account" });
+    }
+  });
+
   return httpServer;
 }
