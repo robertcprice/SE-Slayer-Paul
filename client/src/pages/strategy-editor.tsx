@@ -189,7 +189,6 @@ Respond with a JSON object containing:
           onClick={() => {
             setSelectedStrategy(null);
             resetForm();
-            setFormData(prev => ({ ...prev, systemPrompt: defaultSystemPrompt }));
             setIsEditing(true);
           }}
         >
@@ -291,7 +290,24 @@ Respond with a JSON object containing:
                     id="systemPrompt"
                     value={formData.systemPrompt}
                     onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
-                    placeholder="Enter the AI system prompt..."
+                    placeholder={`Enter the AI system prompt... 
+
+Example: You are an advanced AI trading assistant specializing in ICT (Inner Circle Trader), Smart Money Concepts (SMC), and institutional order flow strategies.
+
+When analyzing trading opportunities, consider:
+- Market structure (BOS - Break of Structure, CHoCH - Change of Character)
+- Liquidity grabs and inducements
+- Fair value gaps (FVG)
+- Order blocks (OB)
+- Premium/discount zones
+- Session timing (e.g. London/NY killzones)
+
+Respond with JSON containing:
+- recommendation: "BUY", "SELL", or "HOLD"
+- reasoning: Detailed explanation
+- position_sizing: Percentage (0.1 to 10.0)
+- stop_loss: Percentage (0.5 to 5.0)
+- take_profit: Percentage (1.0 to 10.0)`}
                     className="min-h-[200px]"
                     disabled={selectedStrategy && !isEditing}
                   />
