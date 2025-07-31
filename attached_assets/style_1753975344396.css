@@ -1,0 +1,106 @@
+/* dashboard/static/style.css */
+
+/* === BASE === */
+body {
+    background: linear-gradient(120deg, #191970 0%, #114488 100%);
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* === HEADER === */
+header {
+    background: transparent;
+    padding: 32px 0 24px 0;
+    text-align: center;
+    border-bottom: none;
+}
+header h1 {
+    margin: 0;
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 10px #000, 0 1px 2px #333;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: inherit;
+}
+
+/* === MAIN LAYOUT === */
+main {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* === GLASSMORPHIC PANELS === */
+.card, .asset-section {
+    background: rgba(255,255,255,0.18);
+    border-radius: 22px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.20);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255,255,255,0.35);
+    padding: 2.5rem 2rem;
+    margin: 1.5rem 0;
+}
+.card *, .asset-section * {
+    color: #fff;
+    text-shadow: 0 0 7px #000, 0 2px 3px #222;
+}
+.panel-header, h2, h3, h1 {
+    text-transform: uppercase;
+    font-family: 'Inter', Arial, Helvetica, sans-serif;
+    font-weight: 800;
+    text-shadow: 0 0 10px #000, 0 1px 1px #fff;
+    letter-spacing: 1.5px;
+}
+.stat-value {
+    font-size: 1.2em;
+    font-weight: 700;
+    text-shadow: 0 0 7px #000, 0 2px 3px #222, 0 0 9px #fff;
+}
+
+.stat-value.positive {
+    color: #6bffb7 !important;
+    text-shadow: 0 0 14px #22e86a, 0 2px 2px #222, 0 0 6px #fff;
+    background: rgba(25,255,100,0.10);
+}
+.stat-value.negative {
+    color: #ff6b6b !important;
+    text-shadow: 0 0 14px #ff224a, 0 2px 2px #222, 0 0 6px #fff;
+    background: rgba(255,45,70,0.09);
+}
+
+/* === PRE TAG (AI reflection) === */
+pre {
+    color: #eef9fc;
+    background: rgba(40,40,60,0.17);
+    border-radius: 10px;
+    padding: 10px 15px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+    font-size: 1.05em;
+    margin-bottom: 0.7em;
+    box-shadow: 0 0 8px rgba(0,0,0,0.09);
+}
+
+/* === BUTTONS === */
+button, select {
+    font-size: 1.09em;
+    font-family: inherit;
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    border: 1px solid #9ae1ff;
+    border-radius: 7px;
+    padding: 7px 14px;
+    margin: 5px 10px 15px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.13);
+    outline: none;
+    transition: background 0.2s, color 0.2s;
+}
+button:hover, select:hover {
+    background: rgba(80,210,255,0.18);
+    color: #e0fff8;
+    cursor: pointer;
+}

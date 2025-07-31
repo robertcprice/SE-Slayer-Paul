@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>AI Trading Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"></script>
+    <style>
+        html, body { height: 100%; min-height: 100vh; }
+        body {
+            transition: background 1.2s cubic-bezier(.47,1.64,.41,.8);
+            font-family: 'Inter', 'Segoe UI', Arial, Helvetica, sans-serif;
+        }
+        .fade-in {
+            opacity: 0;
+            transform: translateY(16px);
+            animation: fadeInMoveUp 0.7s cubic-bezier(.47,1.64,.41,.8) forwards;
+        }
+        @keyframes fadeInMoveUp {
+            to { opacity: 1; transform: none; }
+        }
+        .stat-animate { transition: color 0.2s, background 0.2s, font-size 0.2s;}
+        .stat-animate-up { color: #7CFCB5; font-size: 1.25em; background: #1a3725;}
+        .stat-animate-down { color: #e87979; font-size: 1.12em; background: #3d1a1a;}
+        .spinner {
+            border: 4px solid rgba(44, 233, 255, 0.2);
+            border-top: 4px solid #22d3ee;
+            border-radius: 50%;
+            width: 36px; height: 36px;
+            animation: spin 0.8s linear infinite;
+            margin: 24px auto;
+            box-shadow: 0 0 20px #22d3ee44;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg);}
+            100% { transform: rotate(360deg);}
+        }
+        .gradient-anim {
+            background: linear-gradient(135deg, var(--c1, #173f64), var(--c2, #22d3ee));
+            background-size: 200% 200%;
+            animation: gradientMove 7s ease-in-out infinite alternate;
+        }
+        @keyframes gradientMove {
+            0% {background-position: 0% 50%;}
+            100% {background-position: 100% 50%;}
+        }
+        .progress-bar {
+            height: 7px;
+            border-radius: 9999px;
+            background: linear-gradient(90deg,#22d3ee,#7CFCB5 60%,#ddd 100%);
+            box-shadow: 0 0 8px #22d3ee44;
+            margin-top: 3px;
+            transition: width 0.6s cubic-bezier(.47,1.64,.41,.8);
+        }
+        /* ---- GLASSMORPHIC PANEL ---- */
+        .card-panel {
+            background: rgba(255,255,255,0.12); /* iOS glass: even more see-through */
+            border-radius: 22px;
+            box-shadow: 0 8px 48px 0 rgba(31, 38, 135, 0.11);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1.5px solid rgba(255,255,255,0.19);
+            padding: 2.2rem;
+            margin: 1.2rem 0;
+        }
+        .card-panel, .card-panel * {
+            color: #fff;
+            text-shadow: 0 2px 8px #000a, 0 0 2px #222a, 0 1.5px 1.5px #0007;
+            font-weight: 500;
+        }
+        .card-panel h2, .card-panel h3, .card-panel strong {
+            letter-spacing: 1px;
+            font-family: 'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+            text-transform: uppercase;
+            text-shadow: 0 0 6px #111, 0 2px 2px #222, 0 0 20px #fff3;
+            font-weight: 800;
+        }
+        .section-border, .bg-gray-800 {
+            background: rgba(30,40,60,0.25) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(255,255,255,0.09);
+            box-shadow: 0 2px 10px #0003;
+        }
+        .panel-header, h1, h2, h3 {
+            font-family: 'Inter', 'Segoe UI', Arial, Helvetica, sans-serif;
+            letter-spacing: 0.07em;
+        }
+        .panel-header, h1, h2 {
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+        .glow-title {
+            text-shadow: 0 0 8px #fff, 0 0 18px #fff8, 0 0 2px #fff;
+        }
+        h1 { color: #70e6f7; font-size: 2.7rem; }
+        h2 { color: #64c8fa; font-size: 1.5rem; }
+        h3 { color: #a2e9ff; font-size: 1.1rem; }
+        pre, .text-green-200 { color: #7CFCB5; font-family: 'Fira Mono', 'Consolas', monospace; font-size: 1em; }
+        .text-green-400 { color: #77ffd2; }
+    </style>
+</head>
+<body class="gradient-anim min-h-screen">
+
+    <!-- Global gradient color picker -->
+    <div class="fixed top-4 right-4 z-40 p-3 rounded-2xl shadow-lg bg-gray-900/70 flex items-center space-x-2">
+        <span class="text-gray-300 text-sm font-bold tracking-widest uppercase">🎨 Background</span>
+        <input id="color1" class="color-picker" type="color" value="#173f64" title="Color 1" />
+        <input id="color2" class="color-picker" type="color" value="#22d3ee" title="Color 2" />
+    </div>
+
+    <div class="container mx-auto py-8 px-2">
+        <h1 class="mb-10 text-center tracking-wider drop-shadow-xl animate-pulse">AI TRADING DASHBOARD</h1>
+        <div id="spinner" class="spinner"></div>
+
+        <!-- ACTIVE POSITIONS PANEL -->
+        <div id="positions-panel" class="fade-in card-panel mx-auto w-full max-w-3xl min-h-[24vh] shadow-xl mb-12 hidden">
+            <h2 class="panel-header mb-4">Active Positions</h2>
+            <div id="positions-content">
+                <p class="text-center opacity-80">No open positions.</p>
+            </div>
+            <div class="mt-4">
+                <canvas id="positions-pnl-chart" height="60"></canvas>
+            </div>
+        </div>
+
+        <div id="main-dashboard"
+    class="grid gap-8 justify-center items-center
+    {% if assets|length == 1 %}md:grid-cols-1{% else %}md:grid-cols-2{% endif %} hidden">
+
+        {% for asset in assets %}
+            <div class="fade-in card-panel ... {% if assets|length == 1 %}mx-auto w-full max-w-3xl min-h-[60vh] shadow-2xl{% endif %}>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="panel-header">{{ asset }}</h2>
+                    <div class="flex items-center space-x-2">
+                        <span class="rounded-xl px-3 py-1 text-xs bg-gray-700 text-green-300 shadow border border-cyan-400">LIVE</span>
+                    </div>
+                    <div class="flex items-center mb-4 space-x-3">
+                        <button id="{{ asset }}-pause-btn"
+                            class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-1 px-4 rounded-xl shadow transition"
+                            onclick="togglePause('{{ asset }}')">
+                            Pause
+                        </button>
+                            <label class="ml-4 font-semibold text-cyan-200 uppercase text-xs">Interval:</label>
+                                <select id="{{ asset }}-interval-select"
+                                        onchange="setIntervalWS('{{ asset }}', this.value)"
+                                        class="rounded px-2 py-1 ml-2 bg-gray-700 text-cyan-200">
+                                    <option value="60">1 minute</option>
+                                    <option value="300">5 minutes</option>
+                                    <option value="900">15 minutes</option>
+                                    <option value="1800">30 minutes</option>
+                                    <option value="3600">1 hour</option>
+                                </select>
+                                <span id="{{ asset }}-interval-display" class="text-xs text-cyan-200">1 minute</span>
+
+                    </div>
+                </div>
+                <div class="mb-4 section-border p-3 bg-gray-800">
+                    <canvas id="{{ asset }}-chart" height="110"></canvas>
+                </div>
+                <div class="mb-4 flex flex-wrap gap-5 text-sm section-border bg-gray-800 p-4">
+                    <div>
+                        <strong class="tracking-widest uppercase text-cyan-300 glow-title">PnL</strong>
+                        <span id="{{ asset }}-pnl" class="stat-animate text-lg font-semibold ml-1"></span>
+                        <div class="progress-bar" id="{{ asset }}-pnl-bar" style="width: 0%"></div>
+                    </div>
+                    <div>
+                        <strong class="tracking-widest uppercase text-cyan-300 glow-title">Winrate</strong>
+                        <span id="{{ asset }}-winrate" class="stat-animate text-lg font-semibold ml-1"></span>
+                        <div class="progress-bar" id="{{ asset }}-winrate-bar" style="width: 0%"></div>
+                    </div>
+                    <div>
+                        <strong class="tracking-widest uppercase text-cyan-300 glow-title">Sharpe</strong>
+                        <span id="{{ asset }}-sharpe" class="stat-animate text-lg font-semibold ml-1"></span>
+                        <div class="progress-bar" id="{{ asset }}-sharpe-bar" style="width: 0%"></div>
+                    </div>
+                    <div>
+                        <strong class="tracking-widest uppercase text-cyan-300 glow-title">Drawdown</strong>
+                        <span id="{{ asset }}-drawdown" class="stat-animate text-lg font-semibold ml-1"></span>
+                        <div class="progress-bar" id="{{ asset }}-drawdown-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div id="{{ asset }}-stats" class="mb-2 text-xs text-gray-400"></div>
+                <div class="mb-6 section-border p-4 bg-gray-800">
+                    <h3 class="panel-header mb-1">📝 RECENT TRADES</h3>
+                    <ul id="{{ asset }}-feed" class="text-xs list-disc pl-5 text-gray-200"></ul>
+                </div>
+                <div class="mb-2 section-border p-4 bg-gray-800">
+                    <h3 class="panel-header mb-2">🤖 TRADING STYLE REFLECTION</h3>
+                    <pre id="{{ asset }}-reflection" class="text-green-200 mb-2 whitespace-pre-line"></pre>
+                    <div class="text-green-400"><strong>IMPROVEMENTS:</strong>
+                        <span id="{{ asset }}-improvements"></span>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    </div>
+
+    <script src="/static/main.js"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        setTimeout(() => {
+            document.getElementById("spinner").style.display = "none";
+            document.getElementById("main-dashboard").classList.remove("hidden");
+            document.getElementById("positions-panel").classList.remove("hidden");
+        }, 900);
+
+        document.querySelectorAll('.fade-in').forEach((el, i) => {
+            setTimeout(() => { el.classList.add('!opacity-100'); }, 200 + i * 90);
+        });
+
+        function updateBg() {
+            let c1 = document.getElementById('color1').value;
+            let c2 = document.getElementById('color2').value;
+            document.body.style.setProperty('--c1', c1);
+            document.body.style.setProperty('--c2', c2);
+        }
+        document.getElementById('color1').addEventListener('input', updateBg);
+        document.getElementById('color2').addEventListener('input', updateBg);
+        updateBg();
+    });
+    </script>
+</body>
+</html>
