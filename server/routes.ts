@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { TradingService } from "./services/trading";
 import { tradingScheduler } from "./trading-scheduler";
 import { aiScheduler } from "./services/ai-scheduler";
+import { alpacaClient } from "./services/alpaca";
 import type { WebSocketMessage } from "@shared/schema";
 
 const tradingService = new TradingService();
@@ -998,6 +999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate stats for each asset before reset
       const assets = await storage.getTradingAssets();
+      exportData.stats = {};
       for (const asset of assets) {
         exportData.stats[asset.symbol] = await storage.calculateStats(asset.id);
       }
@@ -1036,8 +1038,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const accountInfo = await alpacaClient.getAccount();
         accountEquity = accountInfo.equity || "Unknown";
         
-      } catch (alpacaError) {
-        console.error("⚠️  Alpaca API error (this is expected in demo mode):", alpacaError.message);
+      } catch (alpacaError: any) {
+        console.error("⚠️  Alpaca API error (this is expected in demo mode):", alpacaError?.message || alpacaError);
         errorMessage = "Alpaca API not accessible (demo/paper mode)";
         
         // In demo mode, simulate successful reset
@@ -1047,20 +1049,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ];
       }
       
-      // Reset our internal positions as well
+      // Reset our internal positions as well - this is critical for dashboard updates
+      let internalPositionsClosed = 0;
       try {
         const allPositions = await storage.getAllPositions();
         const openPositions = allPositions.filter(p => p.isOpen);
         
+        console.log(`🔍 Found ${openPositions.length} open internal positions to close`);
+        
         for (const position of openPositions) {
+          console.log(`🔄 Closing internal position: ${position.symbol} (${position.quantity} @ ${position.avgEntryPrice})`);
+          
           await storage.updatePosition(position.id, {
             isOpen: false,
             unrealizedPnl: "0",
             closedAt: new Date(),
           });
+          
+          internalPositionsClosed++;
         }
         
-        console.log(`🔄 Also closed ${openPositions.length} internal positions`);
+        console.log(`✅ Successfully closed ${internalPositionsClosed} internal positions`);
+        
+        // Broadcast WebSocket updates to all connected clients for each asset
+        const assets = await storage.getTradingAssets();
+        for (const asset of assets) {
+          try {
+            // Get updated positions and stats for this asset
+            const positions = await storage.getPositionsByAsset(asset.id);
+            const stats = await storage.calculateStats(asset.id);
+            
+            // Broadcast to all clients for this asset (will be handled by WebSocket server later)
+            console.log(`📡 Would broadcast position reset for ${asset.symbol} to WebSocket clients`);
+            
+          } catch (broadcastError) {
+            console.error(`Failed to broadcast updates for ${asset.symbol}:`, broadcastError);
+          }
+        }
         
       } catch (dbError) {
         console.error("Database position reset error:", dbError);
@@ -1072,6 +1097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? `Account reset completed in demo mode (Alpaca API not connected)`
           : `Alpaca paper account reset completed successfully`,
         closedPositions: closedPositions.length,
+        internalPositionsClosed,
         alpacaPositions: closedPositions,
         currentEquity: accountEquity,
         targetEquity,
@@ -1079,11 +1105,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         note: errorMessage || "Connected to live Alpaca paper account"
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Complete account reset error:", error);
       res.status(500).json({ 
         error: "Failed to reset account", 
-        details: error.message 
+        details: error?.message || String(error)
       });
     }
   });

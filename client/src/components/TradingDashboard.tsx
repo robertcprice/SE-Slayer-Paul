@@ -107,9 +107,12 @@ export default function TradingDashboard() {
     onSuccess: (data) => {
       toast({
         title: "Alpaca Account Reset",
-        description: `Closed ${data.closedPositions} positions. Account reset completed.`,
+        description: `Closed ${data.closedPositions} Alpaca positions and ${data.internalPositionsClosed} internal positions. Account reset completed.`,
       });
       setShowAlpacaResetDialog(false);
+      
+      // Force refresh the dashboard data immediately
+      window.location.reload();
     },
     onError: (error: any) => {
       toast({
