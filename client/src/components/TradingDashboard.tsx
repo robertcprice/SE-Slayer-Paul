@@ -335,7 +335,7 @@ export default function TradingDashboard() {
       {/* Header */}
       <header className="text-center py-8">
         <h1 className="text-5xl font-black uppercase tracking-widest mb-2 text-white">
-          AI Trading Dashboard
+          Trading Dashboard
         </h1>
         <div className="flex items-center justify-center space-x-2 mt-4">
           <div className="connection-indicator w-3 h-3 bg-green-400 rounded-full"></div>
