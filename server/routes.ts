@@ -1021,8 +1021,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/positions/:id/close", async (req, res) => {
     try {
       const { id } = req.params;
+      console.log(`🔴 Attempting to close position: ${id}`);
       
-      // Get the position
+      // Handle Alpaca positions (they start with "alpaca-")
+      if (id.startsWith("alpaca-")) {
+        console.log(`🏪 Detected Alpaca position: ${id}`);
+        // Extract symbol from alpaca position ID (e.g., "alpaca-XRPUSD" -> "XRPUSD")
+        const alpacaSymbol = id.replace("alpaca-", "");
+        const assetSymbol = alpacaSymbol.includes("USD") 
+          ? alpacaSymbol.replace("USD", "/USD") 
+          : alpacaSymbol + "/USD";
+        
+        try {
+          // Close the Alpaca position directly
+          await alpacaClient.closePosition(alpacaSymbol);
+          
+          res.json({ 
+            success: true, 
+            message: `Alpaca position ${assetSymbol} closed successfully`
+          });
+          return;
+        } catch (error: any) {
+          console.error("Failed to close Alpaca position:", error);
+          return res.status(500).json({ error: "Failed to close Alpaca position: " + error.message });
+        }
+      }
+      
+      // Get the database position
       const position = await storage.getPosition(id);
       if (!position || !position.isOpen) {
         return res.status(404).json({ error: "Position not found or already closed" });

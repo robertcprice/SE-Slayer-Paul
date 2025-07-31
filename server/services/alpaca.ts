@@ -348,6 +348,21 @@ export class AlpacaClient {
     }
   }
 
+  async closePosition(symbol: string): Promise<any> {
+    try {
+      const response = await axios.delete(`${this.baseURL}/v2/positions/${symbol}`, {
+        headers: this.getHeaders(),
+        timeout: 10000 // 10 second timeout
+      });
+      
+      console.log(`🔴 Closed Alpaca position for ${symbol}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to close Alpaca position ${symbol}:`, error);
+      throw error;
+    }
+  }
+
   async closeAllPositions(): Promise<Position[]> {
     try {
       console.log('🔍 Fetching current Alpaca positions...');
