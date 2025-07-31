@@ -181,19 +181,8 @@ export class TradingService {
       orderExecuted = true;
     }
 
-    // Calculate P&L for successful executions
+    // Calculate P&L for successful executions - DON'T calculate here, calculate later based on position changes
     let realPnl = 0;
-    if (executionResult.status === "FILLED" || executionResult.status === "filled") {
-      if (aiDecision.recommendation === "SELL") {
-        // For sells, P&L is based on difference from entry price
-        const existingPosition = await storage.getPositionsByAsset(asset.id);
-        const openPosition = existingPosition.find(p => p.isOpen);
-        if (openPosition) {
-          const entryPrice = parseFloat(openPosition.avgEntryPrice || "0");
-          realPnl = (executionResult.executedPrice - entryPrice) * executionResult.executedQuantity;
-        }
-      }
-    }
 
     // Create trade record (AI decision already logged in OpenAI service)
     const trade = await storage.createTrade({
@@ -555,14 +544,21 @@ export class TradingService {
     // Get recent actual trades for feed (exclude HOLD decisions)
     const allTrades = await storage.getTradesByAsset(asset.id, 50);
     const actualTrades = allTrades.filter(trade => trade.action !== 'HOLD');
-    const feed: TradeFeed[] = actualTrades.slice(0, 10).map(trade => ({
-      timestamp: trade.timestamp?.toISOString() || '',
-      action: trade.action || '',
-      quantity: trade.quantity || '0',
-      price: trade.price || '0',
-      aiReasoning: trade.aiReasoning?.includes('MANUAL') ? trade.aiReasoning : trade.aiReasoning || '',
-      pnl: parseFloat(trade.pnl || "0"),
-    }));
+    const feed: TradeFeed[] = actualTrades.slice(0, 10).map(trade => {
+      // Check if trade is manual by looking at execution result or reasoning
+      const isManual = trade.aiReasoning?.includes('MANUAL TRADE') || 
+                      (trade.executionResult && typeof trade.executionResult === 'object' && 
+                       (trade.executionResult as any).manual === true);
+      
+      return {
+        timestamp: trade.timestamp?.toISOString() || '',
+        action: trade.action || '',
+        quantity: trade.quantity || '0',
+        price: trade.price || '0',
+        aiReasoning: isManual ? `MANUAL - ${trade.aiReasoning || 'Manual trade'}` : (trade.aiReasoning || ''),
+        pnl: parseFloat(trade.pnl || "0"),
+      };
+    });
 
     // Get latest reflection
     const latestReflection = await storage.getLatestReflection(asset.id);
@@ -597,5 +593,182 @@ export class TradingService {
 
   async getAsset(assetSymbol: string): Promise<TradingAsset | undefined> {
     return await storage.getTradingAssetBySymbol(assetSymbol);
+  }
+
+  async executeManualTrade(asset: TradingAsset, tradeParams: {
+    action: string;
+    quantity: number;
+    price?: number;
+    side?: string;
+  }): Promise<any> {
+    try {
+      // Get current market price
+      let currentPrice = 100000; // Default BTC price
+      try {
+        const realPrice = await alpacaClient.getLatestPrice(asset.symbol);
+        if (realPrice) {
+          currentPrice = realPrice;
+        }
+      } catch (error) {
+        console.log(`Using default price for ${asset.symbol}: $${currentPrice}`);
+      }
+
+      const executionPrice = tradeParams.price || currentPrice;
+      const quantity = tradeParams.quantity;
+
+      // Create manual trade record with proper marking
+      const trade = await storage.createTrade({
+        assetId: asset.id,
+        action: tradeParams.action,
+        quantity: quantity.toString(),
+        price: executionPrice.toFixed(2),
+        positionSizing: "0", // Manual trades don't use position sizing
+        stopLoss: null,
+        takeProfit: null,
+        aiReasoning: "MANUAL TRADE - User executed manual trade",
+        aiDecision: { manual: true, action: tradeParams.action },
+        executionResult: {
+          status: "FILLED",
+          orderId: `manual_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          executedPrice: executionPrice,
+          executedQuantity: quantity,
+          manual: true
+        },
+        pnl: "0", // Will be updated by position management
+      });
+
+      // Update positions for manual trades
+      await this.updatePositionForTrade(asset, tradeParams.action, quantity, executionPrice, currentPrice);
+
+      console.log(`📋 Manual ${tradeParams.action} executed for ${asset.symbol}: ${quantity} @ $${executionPrice}`);
+
+      return {
+        success: true,
+        trade,
+        executionPrice,
+        quantity,
+        message: `Manual ${tradeParams.action} executed successfully`
+      };
+
+    } catch (error) {
+      console.error(`Manual trade error for ${asset.symbol}:`, error);
+      throw error;
+    }
+  }
+
+  private async updatePositionForTrade(asset: TradingAsset, action: string, quantity: number, executionPrice: number, currentPrice: number): Promise<void> {
+    const existingPositions = await storage.getPositionsByAsset(asset.id);
+    const openPosition = existingPositions.find(p => p.isOpen);
+
+    if (openPosition) {
+      const currentQuantity = parseFloat(openPosition.quantity || "0");
+      const currentSide = openPosition.side;
+      const avgEntryPrice = parseFloat(openPosition.avgEntryPrice || "0");
+
+      if (currentSide === "long") {
+        if (action === "BUY") {
+          // Increase long position
+          const newQuantity = currentQuantity + quantity;
+          const newAvgPrice = ((avgEntryPrice * currentQuantity) + (executionPrice * quantity)) / newQuantity;
+          
+          await storage.updatePosition(openPosition.id, {
+            quantity: newQuantity.toString(),
+            avgEntryPrice: newAvgPrice.toString(),
+            unrealizedPnl: ((currentPrice - newAvgPrice) * newQuantity).toString(),
+          });
+          
+        } else if (action === "SELL") {
+          if (quantity >= currentQuantity) {
+            // Close long position and potentially open short
+            await storage.updatePosition(openPosition.id, {
+              isOpen: false,
+              unrealizedPnl: "0",
+              closedAt: new Date(),
+            });
+            
+            // If sell quantity exceeds long position, open short with remaining
+            const remainingQty = quantity - currentQuantity;
+            if (remainingQty > 0) {
+              await storage.createPosition({
+                assetId: asset.id,
+                symbol: asset.symbol,
+                side: "short",
+                quantity: remainingQty.toString(),
+                avgEntryPrice: executionPrice.toString(),
+                unrealizedPnl: ((avgEntryPrice - currentPrice) * remainingQty).toString(),
+                isOpen: true,
+              });
+            }
+          } else {
+            // Partial close of long position
+            const newQuantity = currentQuantity - quantity;
+            await storage.updatePosition(openPosition.id, {
+              quantity: newQuantity.toString(),
+              unrealizedPnl: ((currentPrice - avgEntryPrice) * newQuantity).toString(),
+            });
+          }
+        }
+      } else if (currentSide === "short") {
+        if (action === "SELL") {
+          // Increase short position
+          const newQuantity = currentQuantity + quantity;
+          const newAvgPrice = ((avgEntryPrice * currentQuantity) + (executionPrice * quantity)) / newQuantity;
+          
+          await storage.updatePosition(openPosition.id, {
+            quantity: newQuantity.toString(),
+            avgEntryPrice: newAvgPrice.toString(),
+            unrealizedPnl: ((newAvgPrice - currentPrice) * newQuantity).toString(),
+          });
+          
+        } else if (action === "BUY") {
+          if (quantity >= currentQuantity) {
+            // Close short position and potentially open long
+            await storage.updatePosition(openPosition.id, {
+              isOpen: false,
+              unrealizedPnl: "0",
+              closedAt: new Date(),
+            });
+            
+            // If buy quantity exceeds short position, open long with remaining
+            const remainingQty = quantity - currentQuantity;
+            if (remainingQty > 0) {
+              await storage.createPosition({
+                assetId: asset.id,
+                symbol: asset.symbol,
+                side: "long",
+                quantity: remainingQty.toString(),
+                avgEntryPrice: executionPrice.toString(),
+                unrealizedPnl: ((currentPrice - executionPrice) * remainingQty).toString(),
+                isOpen: true,
+              });
+            }
+          } else {
+            // Partial close of short position
+            const newQuantity = currentQuantity - quantity;
+            await storage.updatePosition(openPosition.id, {
+              quantity: newQuantity.toString(),
+              unrealizedPnl: ((avgEntryPrice - currentPrice) * newQuantity).toString(),
+            });
+          }
+        }
+      }
+    } else {
+      // No existing position, create new one
+      const side = action === "BUY" ? "long" : "short";
+      const unrealizedPnl = side === "long" 
+        ? (currentPrice - executionPrice) * quantity
+        : (executionPrice - currentPrice) * quantity;
+
+      await storage.createPosition({
+        assetId: asset.id,
+        symbol: asset.symbol,
+        side,
+        quantity: quantity.toString(),
+        avgEntryPrice: executionPrice.toString(),
+        unrealizedPnl: unrealizedPnl.toString(),
+        isOpen: true,
+      });
+    }
   }
 }

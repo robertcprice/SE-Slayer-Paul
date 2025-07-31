@@ -335,7 +335,24 @@ export class DatabaseStorage implements IStorage {
         };
       }
 
-      const totalPnl = actualTrades.reduce((sum, trade) => sum + (parseFloat(trade.pnl || "0")), 0);
+      // Calculate total P&L differently - use position-based calculations for accuracy
+      const positions = await this.getPositionsByAsset(assetId);
+      const closedPositions = positions.filter(p => !p.isOpen);
+      const openPositions = positions.filter(p => p.isOpen);
+      
+      // P&L from closed positions (realized)
+      const realizedPnl = closedPositions.reduce((sum, pos) => {
+        return sum + parseFloat(pos.unrealizedPnl || "0");
+      }, 0);
+      
+      // P&L from open positions (unrealized) 
+      const unrealizedPnl = openPositions.reduce((sum, pos) => {
+        return sum + parseFloat(pos.unrealizedPnl || "0");
+      }, 0);
+      
+      const totalPnl = realizedPnl + unrealizedPnl;
+      
+      // For win/loss stats, use trade P&L but be more conservative
       const winningTrades = actualTrades.filter(trade => parseFloat(trade.pnl || "0") > 0);
       const losingTrades = actualTrades.filter(trade => parseFloat(trade.pnl || "0") < 0);
       
