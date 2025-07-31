@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import OverviewStats from "./OverviewStats";
 import ActivePositions from "./ActivePositions";
 import AssetPanel from "./AssetPanel";
+import PortfolioChart from "./PortfolioChart";
 
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Button } from "@/components/ui/button";
@@ -355,8 +356,11 @@ export default function TradingDashboard() {
         {/* Overview Stats */}
         <OverviewStats stats={aggregateStats} accountBalance={accountBalance} />
 
-        {/* Active Positions */}
-        <ActivePositions positions={allPositions} />
+        {/* Portfolio Performance and Active Positions */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          <ActivePositions positions={allPositions} />
+          <PortfolioChart />
+        </div>
 
         {/* P&L Charts section removed - charts not rendering properly */}
 

@@ -81,6 +81,7 @@ export class AlpacaClient {
       return response.data.map((pos: any) => ({
         symbol: pos.symbol,
         qty: pos.qty,
+        avg_entry_price: pos.avg_entry_price, // Use correct field name
         market_value: pos.market_value,
         cost_basis: pos.cost_basis,
         unrealized_pl: pos.unrealized_pl,

@@ -572,33 +572,39 @@ export class TradingService {
       };
     }
 
-    // Get ONLY real positions from Alpaca API - no fake internal positions
+    // Get ONLY real positions from Alpaca API - direct feed
     let positions: Position[] = [];
     try {
-      // Get real Alpaca positions only
       const alpacaPositions = await alpacaClient.getPositions();
       const assetPositions = alpacaPositions.filter(p => p.symbol === assetSymbol.replace('/', ''));
       
       if (assetPositions.length > 0) {
-        positions = assetPositions.map(pos => ({
-          id: `alpaca-${pos.symbol}`,
-          openedAt: new Date(),
-          assetId: asset.id,
-          symbol: assetSymbol,
-          side: pos.side,
-          quantity: pos.qty,
-          avgEntryPrice: (parseFloat(pos.cost_basis) / parseFloat(pos.qty)).toString(),
-          unrealizedPnl: pos.unrealized_pl,
-          isOpen: true,
-          closedAt: null,
-        }));
+        positions = assetPositions.map(pos => {
+          // Use real Alpaca P&L directly instead of calculating
+          const realPnl = parseFloat(pos.unrealized_pl || "0");
+          
+          console.log(`📊 Real Alpaca position for ${assetSymbol}: ${pos.qty} @ $${pos.avg_entry_price}, P&L: $${realPnl.toFixed(2)}`);
+          
+          return {
+            id: `alpaca-${pos.symbol}`,
+            openedAt: new Date(),
+            assetId: asset.id,
+            symbol: assetSymbol,
+            side: pos.side,
+            quantity: pos.qty,
+            avgEntryPrice: pos.avg_entry_price,
+            unrealizedPnl: pos.unrealized_pl, // Use real Alpaca P&L
+            isOpen: true,
+            closedAt: null,
+          };
+        });
       }
       
       console.log(`📊 Real Alpaca positions for ${assetSymbol}: ${positions.length} positions`);
       
     } catch (error) {
       console.error(`Failed to get real Alpaca positions for ${assetSymbol}:`, error);
-      positions = []; // No fake fallback positions
+      positions = [];
     }
 
 

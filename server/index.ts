@@ -66,10 +66,14 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     log(`serving on port ${port}`);
     
     // Start AI scheduler for automated strategy analysis
     aiScheduler.start();
+  
+    // Start portfolio tracking
+    const { portfolioTracker } = await import("./services/portfolio-tracker");
+    portfolioTracker.startTracking();
   });
 })();

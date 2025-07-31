@@ -35,6 +35,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Portfolio history endpoint
+  app.get("/api/portfolio/history", async (req, res) => {
+    try {
+      const { portfolioTracker } = await import("./services/portfolio-tracker");
+      const history = await portfolioTracker.getPortfolioHistory();
+      res.json(history);
+    } catch (error) {
+      console.error("Error getting portfolio history:", error);
+      res.status(500).json({ error: "Failed to get portfolio history" });
+    }
+  });
+
   // AI Decision Logs API
   app.get("/api/ai-logs", async (req, res) => {
     try {
