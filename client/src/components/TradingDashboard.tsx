@@ -17,9 +17,20 @@ import { useToast } from "@/hooks/use-toast";
 import type { DashboardStats, Position, TradingAsset, AccountBalance } from "@shared/schema";
 
 export default function TradingDashboard() {
-  const [colorConfig, setColorConfig] = useState({
-    color1: "#0f172a",
-    color2: "#22d3ee",
+  const [colorConfig, setColorConfig] = useState(() => {
+    // Load saved gradient colors from localStorage
+    const saved = localStorage.getItem('trading-dashboard-colors');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.log('Failed to parse saved colors, using defaults');
+      }
+    }
+    return {
+      color1: "#0f172a",
+      color2: "#22d3ee",
+    };
   });
 
   const [showResetDialog, setShowResetDialog] = useState(false);
@@ -152,6 +163,8 @@ export default function TradingDashboard() {
 
   useEffect(() => {
     updateGradient();
+    // Save colors to localStorage whenever they change
+    localStorage.setItem('trading-dashboard-colors', JSON.stringify(colorConfig));
   }, [colorConfig]);
 
   useEffect(() => {

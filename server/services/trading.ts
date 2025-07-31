@@ -91,7 +91,10 @@ export class TradingService {
           // Use real Alpaca P&L directly instead of calculating
           const realPnl = parseFloat(pos.unrealized_pl || "0");
           
-          console.log(`📊 Real Alpaca position for ${assetSymbol}: ${pos.qty} @ $${pos.avgEntryPrice}, P&L: $${realPnl.toFixed(2)}`);
+          // Use the direct avg_entry_price field from Alpaca API
+          const avgEntryPrice = parseFloat(pos.avg_entry_price || "0");
+          
+          console.log(`📊 Real Alpaca position for ${assetSymbol}: ${pos.qty} @ $${avgEntryPrice.toFixed(2)}, P&L: $${realPnl.toFixed(2)}`);
           
           return {
             id: `alpaca-${pos.symbol}`,
@@ -100,7 +103,7 @@ export class TradingService {
             symbol: assetSymbol,
             side: pos.side,
             quantity: pos.qty,
-            avgEntryPrice: pos.avgEntryPrice,
+            avgEntryPrice: avgEntryPrice.toString(),
             unrealizedPnl: realPnl.toString(), // Use parsed real Alpaca P&L
             isOpen: true,
             closedAt: null,
@@ -251,7 +254,7 @@ export class TradingService {
         action: aiDecision.recommendation,
         quantity: quantity.toString(),
         price: currentPrice.toString(),
-        positionSizing: "FIXED",
+        positionSizing: "0.01",
         stopLoss: null,
         takeProfit: null,
         aiReasoning: aiDecision.reasoning,

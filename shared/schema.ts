@@ -18,6 +18,7 @@ export const tradingAssets = pgTable("trading_assets", {
   maxPositionSize: decimal("max_position_size", { precision: 5, scale: 2 }).default("5.0"), // percentage of portfolio
   stopLossPercent: decimal("stop_loss_percent", { precision: 5, scale: 2 }).default("2.0"), // percentage
   takeProfitPercent: decimal("take_profit_percent", { precision: 5, scale: 2 }).default("4.0"), // percentage
+  gradientColors: jsonb("gradient_colors"), // Store custom gradient color preferences
   createdAt: timestamp("created_at").defaultNow(),
 });
 
