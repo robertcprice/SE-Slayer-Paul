@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { TradingService } from "./services/trading";
+import { tradingScheduler } from "./trading-scheduler";
 import type { WebSocketMessage } from "@shared/schema";
 
 const tradingService = new TradingService();
@@ -210,16 +211,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return;
         }
 
-        if (!asset.isPaused) {
-          console.log(`Running trading cycle for ${assetSymbol}`);
+        if (!asset.isPaused && tradingScheduler.canRunTrade(asset.id, assetSymbol, asset.interval || 300)) {
+          console.log(`Running trading cycle for ${assetSymbol} (interval: ${asset.interval}s)`);
           const result = await tradingService.runTradingCycle(asset);
           
           if (result.success) {
             console.log(`Trading cycle completed for ${assetSymbol}`);
+            tradingScheduler.markTradeComplete(asset.id);
             // Send update to all connected clients
             sendDashboardUpdate(assetSymbol);
           } else {
             console.error(`Trading cycle failed for ${assetSymbol}:`, result.error);
+            tradingScheduler.markTradeComplete(asset.id);
+          }
+        } else {
+          const timeUntilNext = tradingScheduler.getTimeUntilNextRun(asset.id);
+          if (timeUntilNext > 0) {
+            console.log(`Skipping trading cycle for ${assetSymbol}: ${Math.round(timeUntilNext)}s until next allowed run`);
           }
         }
 

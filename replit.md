@@ -103,19 +103,19 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes: Latest modifications with dates
 
-### July 31, 2025 - Comprehensive AI Logging System & Position Display Fix
-- **AI Decision Logs Database**: Added `aiDecisionLogs` table to track every OpenAI API call with full metadata
-- **Response Logging**: Implemented comprehensive logging including timing, token usage, market data, and raw responses
-- **Dashboard Integration**: Created AiLogsPanel component with filtering, export (JSON/CSV), and real-time viewing
-- **Navigation System**: Added Navigation component with routing between Trading Dashboard and AI Logs
-- **Position Display Fix**: Fixed missing position display in AssetPanel component with real-time updates
-- **Export APIs**: Added `/api/ai-logs/export/json` and `/api/ai-logs/export/csv` endpoints
-- **Performance Tracking**: Response time measurement and token cost analysis for each AI decision
-- **Comprehensive README**: Created detailed codebase documentation explaining all components and architecture
+### July 31, 2025 - Complete Database Migration & Trading Logic Fix
+- **PostgreSQL Database Migration**: Completely replaced memory storage with persistent PostgreSQL database using Neon
+- **Trading Scheduler Implementation**: Fixed critical timing issue - now ensures exactly ONE API call per asset per interval
+- **Persistent File Logging**: All AI decisions and trades logged to `logs/` directory with timestamps
+- **Database Storage**: All data (trades, positions, AI logs, market data) now persists across restarts
+- **Total Trades Fix**: Corrected calculation to count only actual BUY/SELL trades, not HOLD decisions
+- **Comprehensive Error Handling**: Database operations wrapped with try-catch and proper error logging
+- **Real-time Position Updates**: Live BTC position showing 0.113226311 BTC with -$1.34 unrealized P&L
+- **AI Log Export**: JSON/CSV export functionality working with persistent database storage
 
-### Active Trading Status
-- **Real Alpaca Integration**: Successfully connected to live paper trading account ($99,639 equity)
-- **Active Positions**: BTC/USD long position (0.260 BTC worth ~$30,832 with +$5.30 unrealized P&L)
-- **AI Decision Logging**: System actively logging all OpenAI responses with 3-4 second response times and ~950 tokens per decision
-- **ICT/SMC Strategy**: AI using Inner Circle Trader and Smart Money Concepts for market analysis
-- **Real-time Updates**: WebSocket communication providing live position updates and trading feed
+### Active Trading Status  
+- **Database Persistence**: All historical logs and trades now permanently stored and accessible
+- **Trading Interval Control**: Proper 5-minute intervals enforced - no more multiple API calls within seconds
+- **Current BTC Position**: 0.113226311 BTC at $118,590.86 entry price with -$1.34 unrealized P&L
+- **Logging Infrastructure**: Both database and file-based logging operational for complete audit trail
+- **Real Portfolio**: Live connection to Alpaca paper trading account with real position data

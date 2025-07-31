@@ -58,210 +58,275 @@ export interface IStorage {
   calculateStats(assetId: string): Promise<DashboardStats>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private tradingAssets: Map<string, TradingAsset>;
-  private trades: Map<string, Trade>;
-  private positions: Map<string, Position>;
-  private marketData: Map<string, MarketData>;
-  private aiReflections: Map<string, AiReflection>;
-  private aiDecisionLogs: Map<string, AiDecisionLog>;
+// Import database connection
+import { db } from './db';
+import { eq, desc, sql, and } from 'drizzle-orm';
+import { users, tradingAssets, trades, positions, marketData, aiReflections, aiDecisionLogs } from '@shared/schema';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+export class DatabaseStorage implements IStorage {
+  
+  // Persistent log file paths
+  private logDir = path.join(process.cwd(), 'logs');
+  private aiLogFile = path.join(this.logDir, 'ai-decisions.log');
+  private tradeLogFile = path.join(this.logDir, 'trades.log');
 
   constructor() {
-    this.users = new Map();
-    this.tradingAssets = new Map();
-    this.trades = new Map();
-    this.positions = new Map();
-    this.marketData = new Map();
-    this.aiReflections = new Map();
-    this.aiDecisionLogs = new Map();
-    
-    // Initialize with default trading assets
     this.initializeDefaultAssets();
   }
 
-  private initializeDefaultAssets() {
-    const defaultAssets = [
-      { symbol: "BTC/USD", isActive: true, interval: 300, isPaused: false },
-      { symbol: "SOL/USD", isActive: true, interval: 300, isPaused: false },
-    ];
+  private async initializeDefaultAssets() {
+    try {
+      const existingAssets = await db.select().from(tradingAssets);
+      
+      if (existingAssets.length === 0) {
+        const defaultAssets = [
+          { symbol: "BTC/USD", isActive: true, interval: 300, isPaused: false },
+          { symbol: "SOL/USD", isActive: true, interval: 300, isPaused: false },
+        ];
 
-    defaultAssets.forEach(asset => {
-      const id = randomUUID();
-      this.tradingAssets.set(id, {
-        id,
-        ...asset,
-        createdAt: new Date(),
-      });
-    });
+        for (const asset of defaultAssets) {
+          await db.insert(tradingAssets).values(asset);
+        }
+        console.log("Default trading assets initialized");
+      }
+    } catch (error) {
+      console.error("Failed to initialize default assets:", error);
+    }
+  }
+
+  // Persistent logging methods
+  private async logToFile(filepath: string, message: string): Promise<void> {
+    try {
+      const timestamp = new Date().toISOString();
+      const logMessage = `[${timestamp}] ${message}\n`;
+      await fs.appendFile(filepath, logMessage);
+    } catch (error) {
+      console.error(`Failed to write to log file ${filepath}:`, error);
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getTradingAssets(): Promise<TradingAsset[]> {
-    return Array.from(this.tradingAssets.values());
+    return await db.select().from(tradingAssets);
   }
 
   async getTradingAsset(id: string): Promise<TradingAsset | undefined> {
-    return this.tradingAssets.get(id);
+    const [asset] = await db.select().from(tradingAssets).where(eq(tradingAssets.id, id));
+    return asset || undefined;
   }
 
   async getTradingAssetBySymbol(symbol: string): Promise<TradingAsset | undefined> {
-    return Array.from(this.tradingAssets.values()).find(asset => asset.symbol === symbol);
+    try {
+      const [asset] = await db.select().from(tradingAssets).where(eq(tradingAssets.symbol, symbol));
+      return asset || undefined;
+    } catch (error) {
+      console.error(`Error fetching trading asset by symbol ${symbol}:`, error);
+      return undefined;
+    }
   }
 
   async createTradingAsset(asset: InsertTradingAsset): Promise<TradingAsset> {
-    const id = randomUUID();
-    const newAsset: TradingAsset = {
-      id,
-      symbol: asset.symbol,
-      isActive: asset.isActive ?? true,
-      interval: asset.interval ?? 300,
-      isPaused: asset.isPaused ?? false,
-      createdAt: new Date(),
-    };
-    this.tradingAssets.set(id, newAsset);
+    const [newAsset] = await db.insert(tradingAssets).values(asset).returning();
     return newAsset;
   }
 
   async updateTradingAsset(id: string, updates: Partial<TradingAsset>): Promise<TradingAsset | undefined> {
-    const asset = this.tradingAssets.get(id);
-    if (!asset) return undefined;
-    
-    const updatedAsset = { ...asset, ...updates };
-    this.tradingAssets.set(id, updatedAsset);
-    return updatedAsset;
+    const [updatedAsset] = await db.update(tradingAssets)
+      .set(updates)
+      .where(eq(tradingAssets.id, id))
+      .returning();
+    return updatedAsset || undefined;
   }
 
-  async getTradesByAsset(assetId: string, limit = 50): Promise<Trade[]> {
-    return Array.from(this.trades.values())
-      .filter(trade => trade.assetId === assetId)
-      .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0))
-      .slice(0, limit);
+  async getTradesByAsset(assetId: string, limit?: number): Promise<Trade[]> {
+    try {
+      let query = db.select()
+        .from(trades)
+        .where(eq(trades.assetId, assetId))
+        .orderBy(desc(trades.timestamp));
+      
+      if (limit) {
+        query = query.limit(limit);
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error(`Error fetching trades for asset ${assetId}:`, error);
+      return [];
+    }
   }
 
   async createTrade(trade: InsertTrade): Promise<Trade> {
-    const id = randomUUID();
-    const newTrade: Trade = {
-      id,
-      timestamp: new Date(),
-      assetId: trade.assetId || null,
-      action: trade.action,
-      quantity: trade.quantity || null,
-      price: trade.price || null,
-      positionSizing: trade.positionSizing || null,
-      stopLoss: trade.stopLoss || null,
-      takeProfit: trade.takeProfit || null,
-      aiReasoning: trade.aiReasoning || null,
-      aiDecision: trade.aiDecision || null,
-      executionResult: trade.executionResult || null,
-      pnl: trade.pnl || null,
-    };
-    this.trades.set(id, newTrade);
-    return newTrade;
+    try {
+      const [newTrade] = await db.insert(trades).values(trade).returning();
+      
+      // Log to persistent file
+      await this.logToFile(this.tradeLogFile, 
+        `${trade.action} ${trade.quantity || '0'} ${trade.assetId} @ ${trade.price || '0'} - ${trade.aiReasoning || 'No reasoning'}`
+      );
+      
+      return newTrade;
+    } catch (error) {
+      console.error(`Error creating trade:`, error);
+      throw error;
+    }
   }
 
   async getOpenPositions(): Promise<Position[]> {
-    return Array.from(this.positions.values()).filter(pos => pos.isOpen);
+    try {
+      return await db.select().from(positions).where(eq(positions.isOpen, true));
+    } catch (error) {
+      console.error(`Error fetching open positions:`, error);
+      return [];
+    }
   }
 
   async getPositionsByAsset(assetId: string): Promise<Position[]> {
-    return Array.from(this.positions.values()).filter(pos => pos.assetId === assetId);
+    try {
+      return await db.select().from(positions).where(eq(positions.assetId, assetId));
+    } catch (error) {
+      console.error(`Error fetching positions for asset ${assetId}:`, error);
+      return [];
+    }
   }
 
   async createPosition(position: InsertPosition): Promise<Position> {
-    const id = randomUUID();
-    const newPosition: Position = {
-      id,
-      openedAt: new Date(),
-      assetId: position.assetId || null,
-      symbol: position.symbol,
-      side: position.side,
-      quantity: position.quantity || null,
-      avgEntryPrice: position.avgEntryPrice || null,
-      unrealizedPnl: position.unrealizedPnl || null,
-      isOpen: position.isOpen ?? true,
-      closedAt: position.closedAt || null,
-    };
-    this.positions.set(id, newPosition);
-    return newPosition;
+    try {
+      const [newPosition] = await db.insert(positions).values(position).returning();
+      return newPosition;
+    } catch (error) {
+      console.error(`Error creating position:`, error);
+      throw error;
+    }
   }
 
   async updatePosition(id: string, updates: Partial<Position>): Promise<Position | undefined> {
-    const position = this.positions.get(id);
-    if (!position) return undefined;
-    
-    const updatedPosition = { ...position, ...updates };
-    if (updates.isOpen === false && !updatedPosition.closedAt) {
-      updatedPosition.closedAt = new Date();
+    try {
+      const [updatedPosition] = await db.update(positions)
+        .set(updates)
+        .where(eq(positions.id, id))
+        .returning();
+      return updatedPosition || undefined;
+    } catch (error) {
+      console.error(`Error updating position ${id}:`, error);
+      return undefined;
     }
-    this.positions.set(id, updatedPosition);
-    return updatedPosition;
   }
 
   async getLatestMarketData(assetId: string, limit = 100): Promise<MarketData[]> {
-    return Array.from(this.marketData.values())
-      .filter(data => data.assetId === assetId)
-      .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0))
-      .slice(0, limit);
+    try {
+      return await db.select()
+        .from(marketData)
+        .where(eq(marketData.assetId, assetId))
+        .orderBy(desc(marketData.timestamp))
+        .limit(limit);
+    } catch (error) {
+      console.error(`Error fetching market data for asset ${assetId}:`, error);
+      return [];
+    }
   }
 
   async createMarketData(data: InsertMarketData): Promise<MarketData> {
-    const id = randomUUID();
-    const newData: MarketData = {
-      id,
-      timestamp: new Date(),
-      assetId: data.assetId || null,
-      open: data.open || null,
-      high: data.high || null,
-      low: data.low || null,
-      close: data.close || null,
-      volume: data.volume || null,
-      indicators: data.indicators || null,
-    };
-    this.marketData.set(id, newData);
-    return newData;
+    try {
+      const [newData] = await db.insert(marketData).values(data).returning();
+      return newData;
+    } catch (error) {
+      console.error(`Error creating market data:`, error);
+      throw error;
+    }
   }
 
   async getLatestReflection(assetId: string): Promise<AiReflection | undefined> {
-    return Array.from(this.aiReflections.values())
-      .filter(reflection => reflection.assetId === assetId)
-      .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0))[0];
+    try {
+      const [reflection] = await db.select()
+        .from(aiReflections)
+        .where(eq(aiReflections.assetId, assetId))
+        .orderBy(desc(aiReflections.timestamp))
+        .limit(1);
+      return reflection || undefined;
+    } catch (error) {
+      console.error(`Error fetching latest reflection for asset ${assetId}:`, error);
+      return undefined;
+    }
   }
 
   async createReflection(reflection: InsertAiReflection): Promise<AiReflection> {
-    const id = randomUUID();
-    const newReflection: AiReflection = {
-      id,
-      timestamp: new Date(),
-      assetId: reflection.assetId || null,
-      reflection: reflection.reflection || null,
-      improvements: reflection.improvements || null,
-      summary: reflection.summary || null,
-    };
-    this.aiReflections.set(id, newReflection);
-    return newReflection;
+    try {
+      const [newReflection] = await db.insert(aiReflections).values(reflection).returning();
+      return newReflection;
+    } catch (error) {
+      console.error(`Error creating reflection:`, error);
+      throw error;
+    }
   }
 
   async calculateStats(assetId: string): Promise<DashboardStats> {
-    const trades = await this.getTradesByAsset(assetId);
-    
-    if (trades.length === 0) {
+    try {
+      const trades = await this.getTradesByAsset(assetId);
+      
+      // Count only actual trading actions (BUY/SELL), not HOLD decisions
+      const actualTrades = trades.filter(trade => trade.action !== 'HOLD');
+      
+      if (actualTrades.length === 0) {
+        return {
+          totalPnl: 0,
+          winRate: 0,
+          sharpeRatio: 0,
+          totalTrades: 0,
+          drawdown: 0,
+          averageWin: 0,
+          averageLoss: 0,
+        };
+      }
+
+      const totalPnl = actualTrades.reduce((sum, trade) => sum + (parseFloat(trade.pnl || "0")), 0);
+      const winningTrades = actualTrades.filter(trade => parseFloat(trade.pnl || "0") > 0);
+      const losingTrades = actualTrades.filter(trade => parseFloat(trade.pnl || "0") < 0);
+      
+      const winRate = winningTrades.length / actualTrades.length;
+      const averageWin = winningTrades.length > 0 
+        ? winningTrades.reduce((sum, trade) => sum + parseFloat(trade.pnl || "0"), 0) / winningTrades.length 
+        : 0;
+      const averageLoss = losingTrades.length > 0
+        ? losingTrades.reduce((sum, trade) => sum + parseFloat(trade.pnl || "0"), 0) / losingTrades.length
+        : 0;
+
+      // Simple Sharpe ratio calculation
+      const returns = actualTrades.map(trade => parseFloat(trade.pnl || "0"));
+      const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+      const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+      const stdDev = Math.sqrt(variance);
+      const sharpeRatio = stdDev > 0 ? avgReturn / stdDev : 0;
+
+      return {
+        totalPnl,
+        winRate,
+        sharpeRatio,
+        totalTrades: actualTrades.length, // Only count actual trades
+        drawdown: Math.min(...returns.map((_, i) => 
+          returns.slice(0, i + 1).reduce((sum, ret) => sum + ret, 0)
+        )),
+        averageWin,
+        averageLoss,
+      };
+    } catch (error) {
+      console.error(`Error calculating stats for asset ${assetId}:`, error);
       return {
         totalPnl: 0,
         winRate: 0,
@@ -272,98 +337,43 @@ export class MemStorage implements IStorage {
         averageLoss: 0,
       };
     }
-
-    const totalPnl = trades.reduce((sum, trade) => sum + (parseFloat(trade.pnl || "0")), 0);
-    const winningTrades = trades.filter(trade => parseFloat(trade.pnl || "0") > 0);
-    const losingTrades = trades.filter(trade => parseFloat(trade.pnl || "0") < 0);
-    
-    const winRate = winningTrades.length / trades.length;
-    const averageWin = winningTrades.length > 0 
-      ? winningTrades.reduce((sum, trade) => sum + parseFloat(trade.pnl || "0"), 0) / winningTrades.length 
-      : 0;
-    const averageLoss = losingTrades.length > 0
-      ? losingTrades.reduce((sum, trade) => sum + parseFloat(trade.pnl || "0"), 0) / losingTrades.length
-      : 0;
-
-    // Simple Sharpe ratio calculation (would need risk-free rate in real implementation)
-    const returns = trades.map(trade => parseFloat(trade.pnl || "0"));
-    const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
-    const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
-    const stdDev = Math.sqrt(variance);
-    const sharpeRatio = stdDev > 0 ? avgReturn / stdDev : 0;
-
-    // Simple drawdown calculation
-    let runningPnl = 0;
-    let peak = 0;
-    let maxDrawdown = 0;
-    
-    for (const trade of trades.reverse()) {
-      runningPnl += parseFloat(trade.pnl || "0");
-      if (runningPnl > peak) {
-        peak = runningPnl;
-      }
-      const drawdown = (peak - runningPnl) / Math.max(peak, 1);
-      if (drawdown > maxDrawdown) {
-        maxDrawdown = drawdown;
-      }
-    }
-
-    return {
-      totalPnl,
-      winRate,
-      sharpeRatio,
-      totalTrades: trades.length,
-      drawdown: maxDrawdown,
-      averageWin,
-      averageLoss,
-    };
   }
 
-  // AI Decision Logs
   async getAiDecisionLogs(assetId?: string, limit?: number): Promise<AiDecisionLog[]> {
-    let logs = Array.from(this.aiDecisionLogs.values());
-    
-    if (assetId) {
-      logs = logs.filter(log => log.assetId === assetId);
+    try {
+      let query = db.select().from(aiDecisionLogs);
+      
+      if (assetId) {
+        query = query.where(eq(aiDecisionLogs.assetId, assetId));
+      }
+      
+      query = query.orderBy(desc(aiDecisionLogs.timestamp));
+      
+      if (limit) {
+        query = query.limit(limit);
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error(`Error fetching AI decision logs:`, error);
+      return [];
     }
-    
-    // Sort by timestamp (newest first)
-    logs.sort((a, b) => {
-      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-      return timeB - timeA;
-    });
-    
-    if (limit) {
-      logs = logs.slice(0, limit);
-    }
-    
-    return logs;
   }
 
   async createAiDecisionLog(log: InsertAiDecisionLog): Promise<AiDecisionLog> {
-    const newLog: AiDecisionLog = {
-      id: randomUUID(),
-      timestamp: new Date(),
-      assetId: log.assetId || null,
-      symbol: log.symbol,
-      recommendation: log.recommendation,
-      reasoning: log.reasoning,
-      positionSizing: log.positionSizing || null,
-      stopLoss: log.stopLoss || null,
-      takeProfit: log.takeProfit || null,
-      nextCycleSeconds: log.nextCycleSeconds || null,
-      marketData: log.marketData || null,
-      rawResponse: log.rawResponse || null,
-      responseTimeMs: log.responseTimeMs || null,
-      modelUsed: log.modelUsed || "gpt-4o",
-      promptTokens: log.promptTokens || null,
-      completionTokens: log.completionTokens || null,
-      totalTokens: log.totalTokens || null,
-    };
-    
-    this.aiDecisionLogs.set(newLog.id, newLog);
-    return newLog;
+    try {
+      const [newLog] = await db.insert(aiDecisionLogs).values(log).returning();
+      
+      // Log to persistent file
+      await this.logToFile(this.aiLogFile, 
+        `${log.symbol}: ${log.recommendation} - ${log.reasoning.substring(0, 100)}...`
+      );
+      
+      return newLog;
+    } catch (error) {
+      console.error(`Error creating AI decision log:`, error);
+      throw error;
+    }
   }
 
   async exportAiDecisionLogsToJson(assetId?: string): Promise<string> {
@@ -405,4 +415,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

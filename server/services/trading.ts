@@ -59,8 +59,29 @@ export class TradingService {
       const positions = await storage.getPositionsByAsset(asset.id);
       const openPositions = positions.filter(p => p.isOpen);
 
-      // Get AI decision
+      // Get AI decision with comprehensive logging
+      const startTime = Date.now();
       const aiDecision = await analyzeMarketWithOpenAI(summary, asset.symbol, openPositions, asset.id);
+      const responseTime = Date.now() - startTime;
+      
+      // Log AI decision to database and file
+      await storage.createAiDecisionLog({
+        assetId: asset.id,
+        symbol: asset.symbol,
+        recommendation: aiDecision.recommendation,
+        reasoning: aiDecision.reasoning,
+        positionSizing: aiDecision.position_sizing,
+        stopLoss: aiDecision.stop_loss,
+        takeProfit: aiDecision.take_profit,
+        nextCycleSeconds: asset.interval,
+        marketData: summary,
+        rawResponse: aiDecision,
+        responseTimeMs: responseTime,
+        modelUsed: "gpt-4o",
+        promptTokens: aiDecision.promptTokens || null,
+        completionTokens: aiDecision.completionTokens || null,
+        totalTokens: aiDecision.totalTokens || null,
+      });
       console.log(`AI decision for ${asset.symbol}:`, aiDecision);
 
       // Execute trade based on AI decision
