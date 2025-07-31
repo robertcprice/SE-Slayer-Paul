@@ -18,7 +18,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
   app.get("/api/assets", async (_req, res) => {
     try {
-      const assets = await storage.getTradingAssets();
+      const assets = await storage.getAllTradingAssets();
       res.json(assets);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch assets" });

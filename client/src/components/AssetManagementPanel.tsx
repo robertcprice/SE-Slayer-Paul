@@ -59,6 +59,7 @@ export function AssetManagementPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/assets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assets"] }); // Also invalidate dashboard assets
       setIsAddingAsset(false);
       setNewAsset({
         symbol: "",
@@ -94,6 +95,7 @@ export function AssetManagementPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/assets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assets"] }); // Also invalidate dashboard assets
       setEditingAsset(null);
       toast({
         title: "Asset Updated",
@@ -120,6 +122,7 @@ export function AssetManagementPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/assets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assets"] }); // Also invalidate dashboard assets
       toast({
         title: "Asset Removed",
         description: "Trading asset deleted successfully",

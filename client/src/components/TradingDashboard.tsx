@@ -34,8 +34,9 @@ export default function TradingDashboard() {
 
   const { toast } = useToast();
 
-  const { data: assets } = useQuery<TradingAsset[]>({
+  const { data: assets, refetch: refetchAssets } = useQuery<TradingAsset[]>({
     queryKey: ["/api/assets"],
+    refetchInterval: 5000, // Refresh every 5 seconds to pick up new assets
   });
 
   const manualTradeMutation = useMutation({
@@ -141,9 +142,9 @@ export default function TradingDashboard() {
   const updateGradient = () => {
     const gradientDiv = document.querySelector('.gradient-background') as HTMLElement;
     if (gradientDiv) {
-      gradientDiv.style.background = `linear-gradient(-45deg, ${colorConfig.color1}, ${colorConfig.color2}, ${colorConfig.color1}, ${colorConfig.color2})`;
-      gradientDiv.style.backgroundSize = "400% 400%";
-      gradientDiv.style.animation = "gradientShift 15s ease infinite";
+      gradientDiv.style.setProperty('background', `linear-gradient(-45deg, ${colorConfig.color1}, ${colorConfig.color2}, ${colorConfig.color1}, ${colorConfig.color2})`);
+      gradientDiv.style.setProperty('background-size', '400% 400%');
+      gradientDiv.style.setProperty('animation', 'gradientShift 15s ease infinite');
     }
   };
 
