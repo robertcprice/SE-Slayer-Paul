@@ -82,7 +82,7 @@ export interface IStorage {
 // Import database connection
 import { db } from './db';
 import { eq, desc, sql, and } from 'drizzle-orm';
-import { users, tradingAssets, trades, positions, marketData, aiReflections, aiDecisionLogs } from '@shared/schema';
+import { users, tradingAssets, trades, positions, marketData, aiReflections, aiDecisionLogs, tradingStrategies, backtestResults } from '@shared/schema';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
