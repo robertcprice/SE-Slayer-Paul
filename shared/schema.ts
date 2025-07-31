@@ -96,7 +96,7 @@ export const tradingStrategies = pgTable("trading_strategies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   systemPrompt: text("system_prompt").notNull(),
-  personalityPrompt: text("personality_prompt").notNull(),
+  personalityPrompt: text("personality_prompt"),
   isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
