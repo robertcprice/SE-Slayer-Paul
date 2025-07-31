@@ -982,39 +982,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Manual Trading Endpoints
+  // Manual Trading DISABLED - use real Alpaca interface only
   app.post("/api/trades/manual", async (req, res) => {
-    try {
-      const { assetSymbol, action, quantity, price, side } = req.body;
-      
-      if (!assetSymbol || !action || !quantity) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      // Get asset from database
-      const assets = await storage.getTradingAssets();
-      const asset = assets.find(a => a.symbol === assetSymbol);
-      
-      if (!asset) {
-        return res.status(404).json({ error: "Asset not found" });
-      }
-
-      // Execute manual trade
-      const result = await tradingService.executeManualTrade(asset, {
-        action,
-        quantity: parseFloat(quantity),
-        price: price ? parseFloat(price) : undefined,
-        side
-      });
-
-      // Broadcast update to WebSocket clients
-      sendDashboardUpdate(assetSymbol);
-
-      res.json(result);
-    } catch (error) {
-      console.error("Manual trade error:", error);
-      res.status(500).json({ error: "Failed to execute manual trade" });
-    }
+    res.status(403).json({ error: "Manual trading disabled - use Alpaca dashboard directly" });
   });
 
   // Close position endpoint

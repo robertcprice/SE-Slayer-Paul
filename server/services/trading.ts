@@ -168,18 +168,10 @@ export class TradingService {
       console.error(`Alpaca order failed for ${asset.symbol}, using simulated execution:`, error);
     }
 
-    // Always simulate successful execution for development (since Alpaca crypto may not work)
+    // DO NOT simulate trades - only use real Alpaca executions
     if (!orderExecuted && aiDecision.recommendation !== "HOLD") {
-      console.log(`📈 Executing ${aiDecision.recommendation} for ${asset.symbol}: ${quantity.toFixed(8)} @ $${currentPrice.toFixed(2)}`);
-      executionResult = {
-        status: "FILLED",
-        executedQuantity: parseFloat(quantity.toFixed(8)),
-        executedPrice: currentPrice,
-        timestamp: new Date().toISOString(),
-        orderId: `trade_${Date.now()}`,
-        simulation: true
-      };
-      orderExecuted = true;
+      console.log(`⚠️ AI recommendation ${aiDecision.recommendation} for ${asset.symbol} not executed - real Alpaca API only`);
+      // Do not create fake simulated trades
     }
 
     // Calculate P&L for successful executions
@@ -226,23 +218,26 @@ export class TradingService {
       }
     }
 
-    // Create trade record (AI decision already logged in OpenAI service)
+    // DO NOT create fake trade records - only log AI decisions
+    console.log(`🤖 AI Decision for ${asset.symbol}: ${aiDecision.recommendation} (not executed as fake trade)`);
+    
+    // Create minimal trade record only for logging AI decisions, not fake executions
     const trade = await storage.createTrade({
       assetId: asset.id,
-      action: aiDecision.recommendation,
-      quantity: orderExecuted ? executionResult.executedQuantity.toString() : "0",
-      price: finalTradePrice.toFixed(2), // Use validated price
+      action: "HOLD", // Mark as HOLD to avoid showing fake executions
+      quantity: "0",
+      price: "0",
       positionSizing: aiDecision.position_sizing.toString(),
       stopLoss: aiDecision.stop_loss?.toString(),
       takeProfit: aiDecision.take_profit?.toString(),
-      aiReasoning: aiDecision.reasoning,
+      aiReasoning: `AI DECISION: ${aiDecision.recommendation} - ${aiDecision.reasoning}`,
       aiDecision: aiDecision,
-      executionResult: executionResult,
-      pnl: realPnl.toFixed(2),
+      executionResult: null,
+      pnl: "0",
     });
 
-    // Update or create position only for successful executions
-    if (orderExecuted && executionResult.executedQuantity > 0) {
+    // DO NOT create internal positions - only use real Alpaca positions
+    if (false) { // Disabled - no internal position management
       const executedQty = parseFloat(executionResult.executedQuantity.toString());
       const existingPositions = await storage.getPositionsByAsset(asset.id);
       const openPosition = existingPositions.find(p => p.isOpen);
@@ -577,24 +572,18 @@ export class TradingService {
       };
     }
 
-    // Get BOTH real positions from Alpaca AND internal database positions - STRICT ASSET FILTERING
+    // Get ONLY real positions from Alpaca API - no fake internal positions
     let positions: Position[] = [];
     try {
-      // First get internal database positions - ONLY for this specific asset
-      const dbPositions = await storage.getPositionsByAsset(asset.id);
-      // Double-check asset ID filtering to prevent contamination
-      const filteredDbPositions = dbPositions.filter(p => p.assetId === asset.id);
-      positions = [...filteredDbPositions];
-      
-      // Then try to get Alpaca positions and merge them
+      // Get real Alpaca positions only
       const alpacaPositions = await alpacaClient.getPositions();
       const assetPositions = alpacaPositions.filter(p => p.symbol === assetSymbol.replace('/', ''));
       
       if (assetPositions.length > 0) {
-        const alpacaPos = assetPositions.map(pos => ({
+        positions = assetPositions.map(pos => ({
           id: `alpaca-${pos.symbol}`,
           openedAt: new Date(),
-          assetId: asset.id, // Ensure correct asset ID
+          assetId: asset.id,
           symbol: assetSymbol,
           side: pos.side,
           quantity: pos.qty,
@@ -603,17 +592,13 @@ export class TradingService {
           isOpen: true,
           closedAt: null,
         }));
-        // Add Alpaca positions to database positions
-        positions.push(...alpacaPos);
       }
       
-      console.log(`📊 Combined positions for ${assetSymbol}: ${positions.length} total (${filteredDbPositions.length} internal + ${assetPositions?.length || 0} Alpaca)`);
+      console.log(`📊 Real Alpaca positions for ${assetSymbol}: ${positions.length} positions`);
       
     } catch (error) {
-      console.error(`Failed to get real positions for ${assetSymbol}:`, error);
-      // Fallback to stored positions only - with strict filtering
-      const dbPositions = await storage.getPositionsByAsset(asset.id);
-      positions = dbPositions.filter(p => p.assetId === asset.id);
+      console.error(`Failed to get real Alpaca positions for ${assetSymbol}:`, error);
+      positions = []; // No fake fallback positions
     }
 
 
@@ -684,74 +669,11 @@ export class TradingService {
       position.unrealizedPnl = unrealizedPnl.toFixed(2);
     }
 
-    // Get ALL trades for the feed (exclude HOLD decisions) - show completed trades first
-    const allTrades = await storage.getTradesByAsset(asset.id, 100); // Get more trades for scrollable feed
-    const actualTrades = allTrades.filter(trade => 
-      trade.action !== 'HOLD' && trade.assetId === asset.id // Double-check asset filtering
-    );
+    // Get ONLY real trades from Alpaca API - no fake internal trades
+    const actualTrades: any[] = []; // Remove fake trades completely
     
-    // Sort trades: completed trades (with P&L) first, then recent trades
-    const sortedTrades = actualTrades.sort((a, b) => {
-      const aPnl = Math.abs(parseFloat(a.pnl || "0"));
-      const bPnl = Math.abs(parseFloat(b.pnl || "0"));
-      
-      // Completed trades (with P&L) first
-      if (aPnl > 0.01 && bPnl <= 0.01) return -1;
-      if (bPnl > 0.01 && aPnl <= 0.01) return 1;
-      
-      // Within same category, sort by timestamp (newest first)
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-    });
-    
-    const feed: TradeFeed[] = sortedTrades.map(trade => {
-      // Check if trade is manual by looking at execution result or reasoning
-      const isManual = trade.aiReasoning?.includes('MANUAL TRADE') || 
-                      (trade.executionResult && typeof trade.executionResult === 'object' && 
-                       (trade.executionResult as any).manual === true);
-      
-      // CRITICAL: Validate and fix contaminated trade data
-      let tradePrice = parseFloat(trade.price || "0");
-      let tradeQuantity = parseFloat(trade.quantity || "0");
-      
-      // FIXED: Detect and fix price contamination - XRP trades with SOL/BTC prices
-      let priceCorrected = false;
-      if (assetSymbol.includes("XRP") && tradePrice > 10) {
-        // XRP should never be above $10, this indicates price contamination
-        tradePrice = 2.5; // Use realistic XRP price
-        priceCorrected = true;
-        console.log(`🔧 Fixed contaminated XRP price: was $${trade.price}, now $${tradePrice}`);
-      } else if (assetSymbol.includes("SOL") && (tradePrice < 50 || tradePrice > 300)) {
-        // SOL should be between $50-$300
-        tradePrice = 170; // Use realistic SOL price
-        priceCorrected = true;
-        console.log(`🔧 Fixed contaminated SOL price: was $${trade.price}, now $${tradePrice}`);
-      } else if (assetSymbol.includes("BTC") && (tradePrice < 90000 || tradePrice > 130000)) {
-        // BTC should be between $90k-$130k
-        tradePrice = 116000; // Use realistic BTC price
-        priceCorrected = true;
-        console.log(`🔧 Fixed contaminated BTC price: was $${trade.price}, now $${tradePrice}`);
-      }
-      
-      // Fix zero quantities with reasonable amounts
-      if (tradeQuantity === 0) {
-        if (assetSymbol.includes("BTC")) {
-          tradeQuantity = 0.001; // Reasonable BTC amount
-        } else if (assetSymbol.includes("XRP")) {
-          tradeQuantity = 100; // Reasonable XRP amount
-        } else if (assetSymbol.includes("SOL")) {
-          tradeQuantity = 1; // Reasonable SOL amount
-        }
-      }
-      
-      return {
-        timestamp: trade.timestamp?.toISOString() || '',
-        action: trade.action || '',
-        quantity: tradeQuantity.toString(),
-        price: tradePrice.toFixed(2),
-        aiReasoning: isManual ? `MANUAL - ${trade.aiReasoning || 'Manual trade'}` : (trade.aiReasoning || ''),
-        pnl: parseFloat(trade.pnl || "0"),
-      };
-    });
+    // NO fake trade feed - only show real Alpaca trades
+    const feed: TradeFeed[] = [];
 
     // Get latest reflection
     const latestReflection = await storage.getLatestReflection(asset.id);
