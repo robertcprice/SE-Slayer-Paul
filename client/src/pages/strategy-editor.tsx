@@ -169,13 +169,13 @@ Respond with a JSON object containing:
 - take_profit: Percentage above entry (1.0 to 10.0)`;
 
   useEffect(() => {
-    if (strategies.length > 0 && !selectedStrategy) {
+    if (strategies.length > 0 && !selectedStrategy && !isEditing) {
       const defaultStrategy = strategies.find((s: TradingStrategy) => s.isDefault);
       if (defaultStrategy) {
         handleStrategySelect(defaultStrategy);
       }
     }
-  }, [strategies, selectedStrategy]);
+  }, [strategies, selectedStrategy, isEditing]);
 
   if (isLoading) {
     return <div className="p-8">Loading strategies...</div>;
@@ -188,8 +188,13 @@ Respond with a JSON object containing:
         <Button 
           onClick={() => {
             setSelectedStrategy(null);
-            resetForm();
             setIsEditing(true);
+            setFormData({
+              name: "",
+              systemPrompt: "",
+              personalityPrompt: "",
+              isDefault: false
+            });
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
