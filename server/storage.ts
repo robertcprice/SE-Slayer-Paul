@@ -426,11 +426,17 @@ export class DatabaseStorage implements IStorage {
       
       const totalPnl = realizedPnl + unrealizedPnl;
       
-      // For win/loss stats, use trade P&L but be more conservative
-      const winningTrades = actualTrades.filter(trade => parseFloat(trade.pnl || "0") > 0);
-      const losingTrades = actualTrades.filter(trade => parseFloat(trade.pnl || "0") < 0);
+      // For win/loss stats, only consider trades that close positions (SELL for longs, BUY for shorts)
+      // or trades with non-zero P&L (indicating a position was actually closed)
+      const closingTrades = actualTrades.filter(trade => {
+        const pnl = parseFloat(trade.pnl || "0");
+        return Math.abs(pnl) > 0.01; // Only count trades with meaningful P&L
+      });
       
-      const winRate = winningTrades.length / actualTrades.length;
+      const winningTrades = closingTrades.filter(trade => parseFloat(trade.pnl || "0") > 0);
+      const losingTrades = closingTrades.filter(trade => parseFloat(trade.pnl || "0") < 0);
+      
+      const winRate = closingTrades.length > 0 ? winningTrades.length / closingTrades.length : 0;
       const averageWin = winningTrades.length > 0 
         ? winningTrades.reduce((sum, trade) => sum + parseFloat(trade.pnl || "0"), 0) / winningTrades.length 
         : 0;
@@ -438,23 +444,57 @@ export class DatabaseStorage implements IStorage {
         ? losingTrades.reduce((sum, trade) => sum + parseFloat(trade.pnl || "0"), 0) / losingTrades.length
         : 0;
 
-      // Simple Sharpe ratio calculation
-      const returns = actualTrades.map(trade => parseFloat(trade.pnl || "0"));
-      const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
-      const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
-      const stdDev = Math.sqrt(variance);
-      const sharpeRatio = stdDev > 0 ? avgReturn / stdDev : 0;
+      // Improved Sharpe ratio calculation using percentage returns
+      let sharpeRatio = 0;
+      if (closingTrades.length >= 2) {
+        // Calculate percentage returns based on trade size and P&L
+        const percentageReturns = closingTrades.map(trade => {
+          const pnl = parseFloat(trade.pnl || "0");
+          const tradeValue = parseFloat(trade.quantity || "1") * parseFloat(trade.price || "100");
+          return tradeValue > 0 ? (pnl / tradeValue) * 100 : 0; // Return as percentage
+        }).filter(ret => !isNaN(ret) && isFinite(ret));
+        
+        if (percentageReturns.length >= 2) {
+          const avgReturn = percentageReturns.reduce((sum, ret) => sum + ret, 0) / percentageReturns.length;
+          const variance = percentageReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / (percentageReturns.length - 1);
+          const stdDev = Math.sqrt(variance);
+          
+          // Sharpe ratio = (average return - risk-free rate) / standard deviation
+          // Assuming risk-free rate of 0% for simplicity
+          sharpeRatio = stdDev > 0.01 ? avgReturn / stdDev : 0;
+          
+          // Cap extreme values
+          sharpeRatio = Math.max(-10, Math.min(10, sharpeRatio));
+        }
+      }
+
+      // Calculate drawdown based on cumulative P&L
+      let drawdown = 0;
+      if (closingTrades.length > 0) {
+        const cumulativePnL = [];
+        let runningTotal = 0;
+        
+        closingTrades.forEach(trade => {
+          runningTotal += parseFloat(trade.pnl || "0");
+          cumulativePnL.push(runningTotal);
+        });
+        
+        let peak = cumulativePnL[0];
+        for (const value of cumulativePnL) {
+          if (value > peak) peak = value;
+          const currentDrawdown = peak - value;
+          if (currentDrawdown > drawdown) drawdown = currentDrawdown;
+        }
+      }
 
       return {
         totalPnl,
-        winRate,
-        sharpeRatio,
-        totalTrades: actualTrades.length, // Only count actual trades
-        drawdown: Math.min(...returns.map((_, i) => 
-          returns.slice(0, i + 1).reduce((sum, ret) => sum + ret, 0)
-        )),
-        averageWin,
-        averageLoss,
+        winRate: Math.round(winRate * 10000) / 100, // Convert to percentage with 2 decimal places
+        sharpeRatio: Math.round(sharpeRatio * 100) / 100, // Round to 2 decimal places
+        totalTrades: actualTrades.length, // Total trades (including opens)
+        drawdown: Math.round(drawdown * 100) / 100,
+        averageWin: Math.round(averageWin * 100) / 100,
+        averageLoss: Math.round(averageLoss * 100) / 100,
       };
     } catch (error) {
       console.error(`Error calculating stats for asset ${assetId}:`, error);
