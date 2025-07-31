@@ -75,5 +75,14 @@ app.use((req, res, next) => {
     // Start portfolio tracking
     const { portfolioTracker } = await import("./services/portfolio-tracker");
     portfolioTracker.startTracking();
+
+    console.log("📊 Portfolio tracking started - logging every 5 minutes");
+
+    // Start position tracking for persistent P&L
+    const { positionTracker } = await import('./services/position-tracker');
+    await positionTracker.initializeTracking();
+    positionTracker.startMonitoring(30); // Check every 30 seconds
+
+    console.log("🎯 Position tracking started - monitoring for realized P&L");
   });
 })();

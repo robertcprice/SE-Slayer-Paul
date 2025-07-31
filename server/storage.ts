@@ -82,6 +82,11 @@ export interface IStorage {
   recordPnlSnapshot(assetId: string, currentPrice: number): Promise<void>;
   getPnlHistory(assetId: string, limit?: number): Promise<PnlHistory[]>;
   
+  // Persistent PnL tracking
+  getPersistentPnl(assetId: string): Promise<{realizedPnl: number, unrealizedPnl: number, totalPnl: number} | null>;
+  updatePersistentPnl(assetId: string, realizedPnl: number, unrealizedPnl: number): Promise<void>;
+  addRealizedPnl(assetId: string, realizedAmount: number): Promise<void>;
+  
   // All trading assets
   getAllTradingAssets(): Promise<TradingAsset[]>;
 }
@@ -89,7 +94,7 @@ export interface IStorage {
 // Import database connection
 import { db } from './db';
 import { eq, desc, sql, and } from 'drizzle-orm';
-import { users, tradingAssets, trades, positions, marketData, aiReflections, aiDecisionLogs, tradingStrategies, backtestResults, pnlHistory } from '@shared/schema';
+import { users, tradingAssets, trades, positions, marketData, aiReflections, aiDecisionLogs, tradingStrategies, backtestResults, pnlHistory, persistentPnl } from '@shared/schema';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -838,6 +843,74 @@ export class DatabaseStorage implements IStorage {
       
     } catch (error) {
       console.error("❌ Error resetting trading data:", error);
+      throw error;
+    }
+  }
+
+  // Persistent PnL Tracking Methods
+  async getPersistentPnl(assetId: string): Promise<{realizedPnl: number, unrealizedPnl: number, totalPnl: number} | null> {
+    try {
+      const [record] = await db.select().from(persistentPnl).where(eq(persistentPnl.assetId, assetId));
+      if (!record) return null;
+      
+      return {
+        realizedPnl: parseFloat(record.realizedPnl || "0"),
+        unrealizedPnl: parseFloat(record.unrealizedPnl || "0"),
+        totalPnl: parseFloat(record.totalPnl || "0")
+      };
+    } catch (error) {
+      console.error(`Error fetching persistent P&L for asset ${assetId}:`, error);
+      return null;
+    }
+  }
+
+  async updatePersistentPnl(assetId: string, realizedPnl: number, unrealizedPnl: number): Promise<void> {
+    try {
+      const totalPnl = realizedPnl + unrealizedPnl;
+      
+      // Try to update existing record first
+      const [updated] = await db.update(persistentPnl)
+        .set({
+          realizedPnl: realizedPnl.toString(),
+          unrealizedPnl: unrealizedPnl.toString(),
+          totalPnl: totalPnl.toString(),
+          lastUpdated: new Date()
+        })
+        .where(eq(persistentPnl.assetId, assetId))
+        .returning();
+
+      // If no record exists, create one
+      if (!updated) {
+        await db.insert(persistentPnl).values({
+          assetId,
+          realizedPnl: realizedPnl.toString(),
+          unrealizedPnl: unrealizedPnl.toString(),
+          totalPnl: totalPnl.toString(),
+        });
+      }
+
+      console.log(`💾 Updated persistent P&L for ${assetId}: Realized: $${realizedPnl.toFixed(2)}, Unrealized: $${unrealizedPnl.toFixed(2)}, Total: $${totalPnl.toFixed(2)}`);
+    } catch (error) {
+      console.error(`Error updating persistent P&L for asset ${assetId}:`, error);
+      throw error;
+    }
+  }
+
+  async addRealizedPnl(assetId: string, realizedAmount: number): Promise<void> {
+    try {
+      // Get current persistent PnL
+      const current = await this.getPersistentPnl(assetId);
+      const currentRealized = current ? current.realizedPnl : 0;
+      const currentUnrealized = current ? current.unrealizedPnl : 0;
+      
+      // Add the realized amount to the existing realized PnL
+      const newRealizedPnl = currentRealized + realizedAmount;
+      
+      await this.updatePersistentPnl(assetId, newRealizedPnl, currentUnrealized);
+      
+      console.log(`💰 Added realized P&L for ${assetId}: +$${realizedAmount.toFixed(2)} (Total realized: $${newRealizedPnl.toFixed(2)})`);
+    } catch (error) {
+      console.error(`Error adding realized P&L for asset ${assetId}:`, error);
       throw error;
     }
   }

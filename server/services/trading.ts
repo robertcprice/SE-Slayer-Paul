@@ -50,6 +50,8 @@ export class TradingService {
       sharpeRatio: 0,
       totalTrades: 0,
       drawdown: 0,
+      averageWin: 0,
+      averageLoss: 0,
     };
 
     // Generate realistic chart data
@@ -145,7 +147,10 @@ export class TradingService {
       // Try backup price sources
       try {
         if (assetSymbol.includes("BTC")) {
-          const coinbasePrice = await this.dataClient.getCoinbasePrice("bitcoin");
+          // Using external API for backup price data
+          const response = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC');
+          const data = await response.json();
+          const coinbasePrice = parseFloat(data.data.rates.USD);
           if (coinbasePrice) {
             currentPrice = coinbasePrice;
             console.log(`💰 Using Coinbase API for ${assetSymbol}: $${currentPrice}`);
@@ -156,16 +161,24 @@ export class TradingService {
       }
     }
 
-    // CRITICAL FIX: Calculate REAL stats from REAL Alpaca positions only
-    if (positions.length > 0) {
-      // Calculate total P&L from real Alpaca positions
-      const totalRealPnl = positions.reduce((sum, pos) => {
-        return sum + parseFloat(pos.unrealizedPnl || "0");
-      }, 0);
-      
-      stats.totalPnl = totalRealPnl;
-      console.log(`📊 Real total P&L for ${assetSymbol}: $${totalRealPnl.toFixed(2)}`);
-    }
+    // CRITICAL FIX: Calculate REAL stats from REAL Alpaca positions AND persistent PnL
+    const totalRealPnl = positions.reduce((sum, pos) => {
+      return sum + parseFloat(pos.unrealizedPnl || "0");
+    }, 0);
+    
+    // Get or initialize persistent PnL for this asset
+    const persistentData = await storage.getPersistentPnl(asset.id);
+    
+    // Update persistent PnL with current unrealized P&L
+    const realizedPnl = persistentData ? persistentData.realizedPnl : 0;
+    await storage.updatePersistentPnl(asset.id, realizedPnl, totalRealPnl);
+    
+    // Use persistent total PnL for display (realized + unrealized)
+    const totalPersistentPnl = realizedPnl + totalRealPnl;
+    
+    stats.totalPnl = totalPersistentPnl;
+    console.log(`📊 Real total P&L for ${assetSymbol}: $${totalRealPnl.toFixed(2)} (unrealized) + $${realizedPnl.toFixed(2)} (realized) = $${totalPersistentPnl.toFixed(2)} (total)`);
+    
 
     // Get completed trades from our database (trades created when positions were closed)
     const completedTrades = await storage.getTradesByAsset(asset.id, 20);
@@ -173,18 +186,19 @@ export class TradingService {
       .filter(trade => trade.pnl && Math.abs(parseFloat(trade.pnl)) > 0.01) // Only trades with meaningful P&L
       .map(trade => ({
         action: trade.action,
-        quantity: trade.quantity,
-        price: trade.price,
-        timestamp: trade.timestamp || new Date(),
+        quantity: trade.quantity || "0",
+        price: trade.price || "0",
+        timestamp: (trade.timestamp || new Date()).toISOString(),
         pnl: parseFloat(trade.pnl || "0"),
+        aiReasoning: trade.aiReasoning || "No reasoning provided",
       }))
       .slice(0, 10); // Show last 10 completed trades
 
     // Get latest reflection
     const latestReflection = await storage.getLatestReflection(asset.id);
     const reflection = latestReflection ? {
-      reflection: latestReflection.reflection,
-      improvements: latestReflection.improvements
+      reflection: latestReflection.reflection || "No reflection available",
+      improvements: latestReflection.improvements || "No improvements suggested"
     } : undefined;
 
     // Get account balance - RESTORED FUNCTIONALITY
@@ -197,6 +211,7 @@ export class TradingService {
           equity: account.portfolio_value,
           buyingPower: account.buying_power,
           status: account.status,
+          dayTradeCount: account.daytrade_count || 0,
         };
         console.log(`💰 Account Balance: $${account.portfolio_value} equity, $${account.cash} cash`);
       }
@@ -230,7 +245,7 @@ export class TradingService {
         ema20: historicalData.map(d => d.indicators?.ema20 || d.close),
         ema50: historicalData.map(d => d.indicators?.ema50 || d.close),
         volume: historicalData.map(d => d.volume),
-        timestamps: historicalData.map(d => d.timestamp.toISOString()),
+        timestamp: historicalData.map(d => d.timestamp.toISOString()),
       };
 
       // Get AI decision

@@ -72,6 +72,16 @@ export const aiReflections = pgTable("ai_reflections", {
   summary: jsonb("summary"),
 });
 
+// Persistent PnL tracking - accumulates all realized and unrealized PnL
+export const persistentPnl = pgTable("persistent_pnl", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assetId: varchar("asset_id").references(() => tradingAssets.id),
+  realizedPnl: decimal("realized_pnl", { precision: 18, scale: 2 }).default("0"), // Total from closed trades
+  unrealizedPnl: decimal("unrealized_pnl", { precision: 18, scale: 2 }).default("0"), // Current open positions
+  totalPnl: decimal("total_pnl", { precision: 18, scale: 2 }).default("0"), // realizedPnl + unrealizedPnl
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
 // P&L history tracking for dashboard graphs
 export const pnlHistory = pgTable("pnl_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
