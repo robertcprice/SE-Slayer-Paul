@@ -64,46 +64,32 @@ export class TradingService {
       const aiDecision = await analyzeMarketWithOpenAI(summary, asset.symbol, openPositions, asset.id);
       const responseTime = Date.now() - startTime;
       
-      // Log AI decision to database and file
+      // Log AI decision to database and file (only once)
       await storage.createAiDecisionLog({
         assetId: asset.id,
         symbol: asset.symbol,
         recommendation: aiDecision.recommendation,
         reasoning: aiDecision.reasoning,
-        positionSizing: aiDecision.position_sizing,
-        stopLoss: aiDecision.stop_loss,
-        takeProfit: aiDecision.take_profit,
+        positionSizing: aiDecision.position_sizing?.toString() || null,
+        stopLoss: aiDecision.stop_loss?.toString() || null,
+        takeProfit: aiDecision.take_profit?.toString() || null,
         nextCycleSeconds: asset.interval,
         marketData: summary,
         rawResponse: aiDecision,
         responseTimeMs: responseTime,
         modelUsed: "gpt-4o",
-        promptTokens: aiDecision.promptTokens || null,
-        completionTokens: aiDecision.completionTokens || null,
-        totalTokens: aiDecision.totalTokens || null,
+        promptTokens: null, // Will be populated from OpenAI response
+        completionTokens: null,
+        totalTokens: null,
       });
       console.log(`AI decision for ${asset.symbol}:`, aiDecision);
 
-      // Execute trade based on AI decision
+      // Execute trade based on AI decision (only log actual trades, not HOLD decisions)
       let trade: Trade | undefined;
       if (aiDecision.recommendation !== "HOLD" && aiDecision.position_sizing > 0) {
         trade = await this.executeTrade(asset, aiDecision, historicalData[historicalData.length - 1]);
-      } else {
-        // Log the HOLD decision
-        trade = await storage.createTrade({
-          assetId: asset.id,
-          action: "HOLD",
-          quantity: "0",
-          price: historicalData[historicalData.length - 1].close.toString(),
-          positionSizing: aiDecision.position_sizing.toString(),
-          stopLoss: aiDecision.stop_loss?.toString(),
-          takeProfit: aiDecision.take_profit?.toString(),
-          aiReasoning: aiDecision.reasoning,
-          aiDecision: aiDecision,
-          executionResult: { status: "HOLD", message: "No trade executed" },
-          pnl: "0",
-        });
       }
+      // Don't create trade entries for HOLD decisions to avoid clutter
 
       // Calculate current stats
       const stats = await storage.calculateStats(asset.id);
@@ -309,9 +295,10 @@ export class TradingService {
       positions = await storage.getPositionsByAsset(asset.id);
     }
 
-    // Get recent trades for feed
-    const recentTrades = await storage.getTradesByAsset(asset.id, 10);
-    const feed: TradeFeed[] = recentTrades.map(trade => ({
+    // Get recent actual trades for feed (exclude HOLD decisions)
+    const allTrades = await storage.getTradesByAsset(asset.id, 50);
+    const actualTrades = allTrades.filter(trade => trade.action !== 'HOLD');
+    const feed: TradeFeed[] = actualTrades.slice(0, 10).map(trade => ({
       timestamp: trade.timestamp?.toISOString() || '',
       action: trade.action || '',
       quantity: trade.quantity || '0',

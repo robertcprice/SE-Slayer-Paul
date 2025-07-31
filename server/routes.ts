@@ -257,5 +257,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // AI Decision Logs endpoint - ensure deduplication
+  app.get("/api/ai-logs", async (req, res) => {
+    try {
+      const { asset, limit } = req.query;
+      const logs = await storage.getAiDecisionLogs(asset as string, limit ? parseInt(limit as string) : undefined);
+      
+      // Deduplicate logs by timestamp and symbol combination
+      const uniqueLogs = logs.filter((log, index, self) => 
+        index === self.findIndex(l => 
+          l.timestamp?.getTime() === log.timestamp?.getTime() && 
+          l.symbol === log.symbol
+        )
+      );
+      
+      res.json(uniqueLogs);
+    } catch (error) {
+      console.error("Error fetching AI logs:", error);
+      res.status(500).json({ error: "Failed to fetch AI logs" });
+    }
+  });
+
+  // Export AI Decision Logs
+  app.get("/api/ai-logs/export/:format", async (req, res) => {
+    try {
+      const { format } = req.params;
+      const { asset } = req.query;
+      
+      if (format === "json") {
+        const jsonData = await storage.exportAiDecisionLogsToJson(asset as string);
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', 'attachment; filename="ai-logs.json"');
+        res.send(jsonData);
+      } else if (format === "csv") {
+        const csvData = await storage.exportAiDecisionLogsToCsv(asset as string);
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="ai-logs.csv"');
+        res.send(csvData);
+      } else {
+        res.status(400).json({ error: "Invalid format. Use 'json' or 'csv'" });
+      }
+    } catch (error) {
+      console.error("Error exporting AI logs:", error);
+      res.status(500).json({ error: "Failed to export AI logs" });
+    }
+  });
+
+  // Admin routes for backtesting and sentiment
+  app.get("/api/admin/system-stats", async (req, res) => {
+    try {
+      const assets = await storage.getAllTradingAssets();
+      let totalPnl = 0;
+      let totalTrades = 0;
+      let totalPositions = 0;
+      
+      for (const asset of assets) {
+        const stats = await storage.calculateStats(asset.id);
+        const positions = await storage.getPositionsByAsset(asset.id);
+        totalPnl += stats.totalPnl;
+        totalTrades += stats.totalTrades;
+        totalPositions += positions.filter(p => p.isOpen).length;
+      }
+      
+      res.json({
+        totalPnl,
+        totalTrades,
+        activePositions: totalPositions,
+        totalAssets: assets.length,
+      });
+    } catch (error) {
+      console.error("Error fetching system stats:", error);
+      res.status(500).json({ error: "Failed to fetch system stats" });
+    }
+  });
+
+  app.post("/api/admin/backtest", async (req, res) => {
+    try {
+      const { asset, period, strategy } = req.body;
+      
+      // Mock backtest results for now - replace with real implementation
+      const result = {
+        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        endDate: new Date().toISOString(),
+        totalReturn: 24.5,
+        sharpeRatio: 1.85,
+        maxDrawdown: -8.2,
+        winRate: 68.5,
+        totalTrades: 247,
+        strategy: strategy || "AI ICT/SMC",
+      };
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error running backtest:", error);
+      res.status(500).json({ error: "Failed to run backtest" });
+    }
+  });
+
   return httpServer;
 }

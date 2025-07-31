@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Database } from "lucide-react";
+import { TrendingUp, Database, Settings } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -34,6 +34,17 @@ export function Navigation() {
               >
                 <Database className="h-4 w-4" />
                 AI Logs
+              </Button>
+            </Link>
+            
+            <Link href="/admin">
+              <Button 
+                variant={location === "/admin" ? "default" : "ghost"} 
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Admin
               </Button>
             </Link>
           </div>
