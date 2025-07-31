@@ -169,7 +169,7 @@ Preferred communication style: Simple, everyday language.
 - **Position State Management**: System tracks both long and short positions with accurate quantity and entry price averaging
 - **Automated Position Transitions**: When SELL quantity exceeds long position, automatically closes long and opens short with remainder
 
-### July 31, 2025 - Complete Reset System & UI Improvements
+### July 31, 2025 - Complete Reset System & UI Improvements  
 - **Export & Reset All Data**: Complete system reset with JSON export of all trading data before clearing database
 - **Alpaca Account Reset**: Button to close all Alpaca paper trading positions with robust error handling
 - **Demo Mode Support**: Graceful fallback when Alpaca API is not accessible, simulates position closure
@@ -178,6 +178,15 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Error Handling**: Comprehensive error handling for API failures with informative user feedback
 - **Data Export Format**: Complete JSON export includes trades, positions, AI logs, reflections, market data, and statistics
 - **Reset Confirmation Dialogs**: Warning dialogs with detailed information about irreversible actions
+
+### July 31, 2025 - Fixed Critical Reset & Manual Trading Issues
+- **Complete Data Reset**: Alpaca account reset now clears ALL trading data including trades, AI logs, and statistics
+- **Manual Trade P&L Fix**: Manual trades now properly calculate and update position P&L in real-time
+- **Position Management Enhancement**: Improved position tracking combining both Alpaca and internal database positions
+- **P&L Calculation Accuracy**: Fixed unrealized P&L calculations for both BUY and SELL manual trades
+- **Dashboard Synchronization**: Manual trades and resets now immediately update dashboard with accurate position data
+- **Database Consistency**: Enhanced position updates with proper quantity averaging and P&L tracking
+- **Trade Feed Integration**: Manual trades properly appear in trade feed with correct P&L display
 
 ### Active Trading Status  
 - **Database Persistence**: All historical logs and trades now permanently stored and accessible

@@ -415,10 +415,14 @@ export class TradingService {
           const newQuantity = currentQuantity + tradeParams.quantity;
           const avgPrice = ((currentAvgPrice * currentQuantity) + (executionPrice * tradeParams.quantity)) / newQuantity;
           
+          // Calculate unrealized P&L based on current market price vs avg entry price
+          const currentMarketPrice = executionPrice; // Use latest execution price as market price
+          const unrealizedPnl = (currentMarketPrice - avgPrice) * newQuantity;
+          
           await storage.updatePosition(openPosition.id, {
             quantity: newQuantity.toString(),
             avgEntryPrice: avgPrice.toString(),
-            unrealizedPnl: ((executionPrice - avgPrice) * newQuantity).toString(),
+            unrealizedPnl: unrealizedPnl.toString(),
           });
           
           console.log(`📈 Manual position update for ${asset.symbol}: ${newQuantity.toFixed(8)} @ avg $${avgPrice.toFixed(2)}`);
@@ -437,11 +441,13 @@ export class TradingService {
             // Partial close
             const newQuantity = currentQuantity - tradeParams.quantity;
             const avgEntryPrice = parseFloat(openPosition.avgEntryPrice || "0");
+            const unrealizedPnl = (executionPrice - avgEntryPrice) * newQuantity;
+            
             await storage.updatePosition(openPosition.id, {
               quantity: newQuantity.toString(),
-              unrealizedPnl: ((executionPrice - avgEntryPrice) * newQuantity).toString(),
+              unrealizedPnl: unrealizedPnl.toString(),
             });
-            console.log(`📉 Manual position reduced for ${asset.symbol}: ${newQuantity.toFixed(8)} remaining`);
+            console.log(`📉 Manual position reduced for ${asset.symbol}: ${newQuantity.toFixed(8)} remaining (P&L: $${unrealizedPnl.toFixed(2)})`);
           }
         }
       } else {
@@ -454,7 +460,7 @@ export class TradingService {
           side: positionSide,
           quantity: tradeParams.quantity.toString(),
           avgEntryPrice: executionPrice.toString(),
-          unrealizedPnl: "0",
+          unrealizedPnl: "0", // New positions start with 0 P&L
           isOpen: true,
         });
         
@@ -512,14 +518,19 @@ export class TradingService {
       };
     }
 
-    // Get real positions from Alpaca
+    // Get BOTH real positions from Alpaca AND internal database positions
     let positions: Position[] = [];
     try {
+      // First get internal database positions
+      const dbPositions = await storage.getPositionsByAsset(asset.id);
+      positions = [...dbPositions];
+      
+      // Then try to get Alpaca positions and merge them
       const alpacaPositions = await alpacaClient.getPositions();
       const assetPositions = alpacaPositions.filter(p => p.symbol === assetSymbol.replace('/', ''));
       
       if (assetPositions.length > 0) {
-        positions = assetPositions.map(pos => ({
+        const alpacaPos = assetPositions.map(pos => ({
           id: `alpaca-${pos.symbol}`,
           openedAt: new Date(),
           assetId: asset.id,
@@ -531,15 +542,19 @@ export class TradingService {
           isOpen: true,
           closedAt: null,
         }));
-      } else {
-        // Fallback to stored positions
-        positions = await storage.getPositionsByAsset(asset.id);
+        // Add Alpaca positions to database positions
+        positions.push(...alpacaPos);
       }
+      
+      console.log(`📊 Combined positions for ${assetSymbol}: ${positions.length} total (${dbPositions.length} internal + ${assetPositions?.length || 0} Alpaca)`);
+      
     } catch (error) {
       console.error(`Failed to get real positions for ${assetSymbol}:`, error);
-      // Fallback to stored positions
-      positions = await storage.getPositionsByAsset(asset.id);
+      // Fallback to stored positions only
+      const dbPositions = await storage.getPositionsByAsset(asset.id);
+      positions = [...dbPositions];
     }
+
 
     // Get recent actual trades for feed (exclude HOLD decisions)
     const allTrades = await storage.getTradesByAsset(asset.id, 50);

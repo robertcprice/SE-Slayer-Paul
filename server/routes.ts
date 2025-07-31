@@ -6,6 +6,8 @@ import { TradingService } from "./services/trading";
 import { tradingScheduler } from "./trading-scheduler";
 import { aiScheduler } from "./services/ai-scheduler";
 import { alpacaClient } from "./services/alpaca";
+import { db } from "./db";
+import { backtestResults, marketData, trades, aiReflections, aiDecisionLogs } from "@shared/schema";
 import type { WebSocketMessage } from "@shared/schema";
 
 const tradingService = new TradingService();
@@ -1070,6 +1072,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log(`✅ Successfully closed ${internalPositionsClosed} internal positions`);
+        
+        // ALSO RESET ALL TRADING DATA like export & reset does
+        console.log(`🔄 Clearing all trade history and AI logs for complete reset...`);
+        
+        // Delete all trading data in correct order (foreign key constraints)
+        await db.delete(backtestResults);
+        await db.delete(marketData);  
+        await db.delete(trades);
+        await db.delete(aiReflections);
+        await db.delete(aiDecisionLogs);
+        
+        console.log(`✅ All trading data cleared - fresh start achieved`);
         
         // Broadcast WebSocket updates to all connected clients for each asset
         const assets = await storage.getTradingAssets();
