@@ -269,6 +269,80 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateTradePnL(tradeId: string, pnl: number): Promise<void> {
+    try {
+      await db.update(trades)
+        .set({ pnl: pnl.toString() })
+        .where(eq(trades.id, tradeId));
+    } catch (error) {
+      console.error(`Error updating trade P&L:`, error);
+      throw error;
+    }
+  }
+
+  async updateMostRecentTradePnL(assetId: string, pnl: number): Promise<void> {
+    try {
+      // Get the most recent trade for this asset
+      const [recentTrade] = await db.select()
+        .from(trades)
+        .where(eq(trades.assetId, assetId))
+        .orderBy(desc(trades.timestamp))
+        .limit(1);
+      
+      if (recentTrade) {
+        await this.updateTradePnL(recentTrade.id, pnl);
+      }
+    } catch (error) {
+      console.error(`Error updating most recent trade P&L:`, error);
+      throw error;
+    }
+  }
+
+  async recalculateAllTradePnL(): Promise<void> {
+    try {
+      // For existing trades with $0 P&L, attempt to calculate based on position changes
+      const tradesWithZeroPnL = await db.select()
+        .from(trades)
+        .where(eq(trades.pnl, "0"));
+      
+      console.log(`🔄 Recalculating P&L for ${tradesWithZeroPnL.length} trades with $0 P&L...`);
+      
+      for (const trade of tradesWithZeroPnL) {
+        // For sell trades, calculate P&L based on available data
+        if (trade.action === "SELL" && trade.executionResult) {
+          try {
+            const result = JSON.parse(trade.executionResult as string);
+            const executedPrice = result.executedPrice || parseFloat(trade.price || "0");
+            const executedQuantity = result.executedQuantity || parseFloat(trade.quantity || "0");
+            
+            // Get positions to estimate entry price (simplified calculation)
+            const positions = await this.getPositionsByAsset(trade.assetId);
+            const closedPositions = positions.filter(p => !p.isOpen);
+            
+            if (closedPositions.length > 0) {
+              const avgEntryPrice = closedPositions.reduce((sum, pos) => 
+                sum + parseFloat(pos.avgEntryPrice || "0"), 0) / closedPositions.length;
+              
+              const estimatedPnL = (executedPrice - avgEntryPrice) * executedQuantity;
+              
+              // Only update if the estimated P&L is reasonable (not extreme)
+              if (Math.abs(estimatedPnL) < 10000) {
+                await this.updateTradePnL(trade.id, estimatedPnL);
+                console.log(`✅ Updated ${trade.action} trade P&L: $${estimatedPnL.toFixed(2)}`);
+              }
+            }
+          } catch (error) {
+            console.log(`⚠️ Could not recalculate P&L for trade ${trade.id}`);
+          }
+        }
+      }
+      
+      console.log(`🔄 P&L recalculation complete.`);
+    } catch (error) {
+      console.error(`Error recalculating trade P&L:`, error);
+    }
+  }
+
   async getLatestMarketData(assetId: string, limit = 100): Promise<MarketData[]> {
     try {
       return await db.select()

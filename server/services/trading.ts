@@ -182,15 +182,35 @@ export class TradingService {
       orderExecuted = true;
     }
 
-    // Calculate P&L for successful executions - DON'T calculate here, calculate later based on position changes
+    // Calculate P&L for successful executions
     let realPnl = 0;
+    if (orderExecuted && executionResult.executedQuantity > 0) {
+      const existingPositions = await storage.getPositionsByAsset(asset.id);
+      const openPosition = existingPositions.find(p => p.isOpen);
+      
+      if (openPosition && aiDecision.recommendation === "SELL") {
+        // Calculate realized P&L for closing trades
+        const entryPrice = parseFloat(openPosition.avgEntryPrice || "0");
+        const positionSide = openPosition.side;
+        
+        if (positionSide === "long") {
+          realPnl = (executionResult.executedPrice - entryPrice) * Math.min(executionResult.executedQuantity, parseFloat(openPosition.quantity || "0"));
+        } else {
+          realPnl = (entryPrice - executionResult.executedPrice) * Math.min(executionResult.executedQuantity, parseFloat(openPosition.quantity || "0"));
+        }
+      } else if (openPosition && aiDecision.recommendation === "BUY" && openPosition.side === "short") {
+        // Closing short position with buy
+        const entryPrice = parseFloat(openPosition.avgEntryPrice || "0");
+        realPnl = (entryPrice - executionResult.executedPrice) * Math.min(executionResult.executedQuantity, parseFloat(openPosition.quantity || "0"));
+      }
+    }
 
     // Create trade record (AI decision already logged in OpenAI service)
     const trade = await storage.createTrade({
       assetId: asset.id,
       action: aiDecision.recommendation,
       quantity: orderExecuted ? executionResult.executedQuantity.toString() : "0",
-      price: currentPrice.toFixed(2),
+      price: orderExecuted ? executionResult.executedPrice.toFixed(2) : currentPrice.toFixed(2),
       positionSizing: aiDecision.position_sizing.toString(),
       stopLoss: aiDecision.stop_loss?.toString(),
       takeProfit: aiDecision.take_profit?.toString(),
@@ -232,10 +252,12 @@ export class TradingService {
               
               await storage.updatePosition(openPosition.id, {
                 isOpen: false,
-                unrealizedPnl: "0",
+                unrealizedPnl: finalPnl.toString(), // Store realized P&L when closing
                 closedAt: new Date(),
               });
               
+              // Update the current trade's P&L to reflect the realized P&L
+              await storage.updateTradePnL(trade.id, finalPnl);
               console.log(`📉 Closed LONG position for ${asset.symbol}: P&L $${finalPnl.toFixed(2)}`);
               
               // If sell quantity exceeds long position, open short with remaining
@@ -286,10 +308,12 @@ export class TradingService {
               
               await storage.updatePosition(openPosition.id, {
                 isOpen: false,
-                unrealizedPnl: "0",
+                unrealizedPnl: finalPnl.toString(), // Store realized P&L when closing
                 closedAt: new Date(),
               });
               
+              // Update the current trade's P&L to reflect the realized P&L
+              await storage.updateTradePnL(trade.id, finalPnl);
               console.log(`📈 Closed SHORT position for ${asset.symbol}: P&L $${finalPnl.toFixed(2)}`);
               
               // If buy quantity exceeds short position, open long with remaining
@@ -374,14 +398,23 @@ export class TradingService {
         manual: true
       };
 
-      // Calculate P&L for SELL orders
+      // Calculate P&L for closing trades
       let realPnl = 0;
-      if (tradeParams.action === "SELL") {
-        const existingPositions = await storage.getPositionsByAsset(asset.id);
-        const openPosition = existingPositions.find(p => p.isOpen);
-        if (openPosition) {
-          const entryPrice = parseFloat(openPosition.avgEntryPrice || "0");
-          realPnl = (executionPrice - entryPrice) * tradeParams.quantity;
+      const existingPositions = await storage.getPositionsByAsset(asset.id);
+      const openPosition = existingPositions.find(p => p.isOpen);
+      
+      if (openPosition) {
+        const entryPrice = parseFloat(openPosition.avgEntryPrice || "0");
+        const positionSide = openPosition.side;
+        const positionQty = parseFloat(openPosition.quantity || "0");
+        const tradeQty = Math.min(tradeParams.quantity, positionQty);
+        
+        if (tradeParams.action === "SELL" && positionSide === "long") {
+          // Closing long position
+          realPnl = (executionPrice - entryPrice) * tradeQty;
+        } else if (tradeParams.action === "BUY" && positionSide === "short") {
+          // Closing short position
+          realPnl = (entryPrice - executionPrice) * tradeQty;
         }
       }
 
@@ -404,9 +437,8 @@ export class TradingService {
         pnl: realPnl.toString(),
       });
 
-      // Update positions
-      const existingPositions = await storage.getPositionsByAsset(asset.id);
-      const openPosition = existingPositions.find(p => p.isOpen);
+      // Update positions (reuse variables from P&L calculation)
+      // existingPositions and openPosition already declared above
 
       if (openPosition) {
         if (tradeParams.action === "BUY") {
@@ -431,13 +463,17 @@ export class TradingService {
           // Reduce or close position
           const currentQuantity = parseFloat(openPosition.quantity || "0");
           if (tradeParams.quantity >= currentQuantity) {
-            // Close entire position
+            // Close entire position - store final P&L in position
+            const finalPnl = (executionPrice - parseFloat(openPosition.avgEntryPrice || "0")) * currentQuantity;
             await storage.updatePosition(openPosition.id, {
               isOpen: false,
-              unrealizedPnl: "0",
+              unrealizedPnl: finalPnl.toString(), // Store realized P&L when closing
               closedAt: new Date(),
             });
-            console.log(`📉 Manual position closed for ${asset.symbol}: P&L $${realPnl.toFixed(2)}`);
+            
+            // Update the most recent trade's P&L to reflect the realized P&L
+            await storage.updateMostRecentTradePnL(asset.id, finalPnl);
+            console.log(`📉 Manual position closed for ${asset.symbol}: P&L $${finalPnl.toFixed(2)}`);
           } else {
             // Partial close
             const newQuantity = currentQuantity - tradeParams.quantity;
