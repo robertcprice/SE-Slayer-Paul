@@ -44,6 +44,7 @@ export interface IStorage {
   // Positions
   getOpenPositions(): Promise<Position[]>;
   getPositionsByAsset(assetId: string): Promise<Position[]>;
+  getPosition(id: string): Promise<Position | undefined>;
   createPosition(position: InsertPosition): Promise<Position>;
   updatePosition(id: string, updates: Partial<Position>): Promise<Position | undefined>;
   
@@ -249,6 +250,16 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error fetching positions for asset ${assetId}:`, error);
       return [];
+    }
+  }
+
+  async getPosition(id: string): Promise<Position | undefined> {
+    try {
+      const [position] = await db.select().from(positions).where(eq(positions.id, id));
+      return position || undefined;
+    } catch (error) {
+      console.error(`Error fetching position ${id}:`, error);
+      return undefined;
     }
   }
 
