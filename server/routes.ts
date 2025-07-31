@@ -578,5 +578,262 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trading Strategy Routes
+  app.get("/api/strategies", async (req, res) => {
+    try {
+      const strategies = await storage.getTradingStrategies();
+      res.json(strategies);
+    } catch (error) {
+      console.error("Error fetching strategies:", error);
+      res.status(500).json({ error: "Failed to fetch strategies" });
+    }
+  });
+
+  app.get("/api/strategies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const strategy = await storage.getTradingStrategy(id);
+      if (!strategy) {
+        return res.status(404).json({ error: "Strategy not found" });
+      }
+      res.json(strategy);
+    } catch (error) {
+      console.error("Error fetching strategy:", error);
+      res.status(500).json({ error: "Failed to fetch strategy" });
+    }
+  });
+
+  app.post("/api/strategies", async (req, res) => {
+    try {
+      const { name, systemPrompt, personalityPrompt, isDefault } = req.body;
+      
+      if (!name || !systemPrompt) {
+        return res.status(400).json({ error: "Name and system prompt are required" });
+      }
+
+      // If this is set as default, unset any existing default
+      if (isDefault) {
+        const existingDefault = await storage.getDefaultTradingStrategy();
+        if (existingDefault) {
+          await storage.updateTradingStrategy(existingDefault.id, { isDefault: false });
+        }
+      }
+
+      const strategy = await storage.createTradingStrategy({
+        name,
+        systemPrompt,
+        personalityPrompt: personalityPrompt || "",
+        isDefault: isDefault || false
+      });
+
+      res.json(strategy);
+    } catch (error) {
+      console.error("Error creating strategy:", error);
+      res.status(500).json({ error: "Failed to create strategy" });
+    }
+  });
+
+  app.put("/api/strategies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, systemPrompt, personalityPrompt, isDefault } = req.body;
+
+      // If this is set as default, unset any existing default
+      if (isDefault) {
+        const existingDefault = await storage.getDefaultTradingStrategy();
+        if (existingDefault && existingDefault.id !== id) {
+          await storage.updateTradingStrategy(existingDefault.id, { isDefault: false });
+        }
+      }
+
+      const updated = await storage.updateTradingStrategy(id, {
+        name,
+        systemPrompt,
+        personalityPrompt,
+        isDefault
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "Strategy not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating strategy:", error);
+      res.status(500).json({ error: "Failed to update strategy" });
+    }
+  });
+
+  app.delete("/api/strategies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteTradingStrategy(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Strategy not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting strategy:", error);
+      res.status(500).json({ error: "Failed to delete strategy" });
+    }
+  });
+
+  // Backtesting Routes
+  app.get("/api/backtests", async (req, res) => {
+    try {
+      const { limit } = req.query;
+      const results = await storage.getBacktestResults(limit ? parseInt(limit as string) : undefined);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching backtest results:", error);
+      res.status(500).json({ error: "Failed to fetch backtest results" });
+    }
+  });
+
+  app.post("/api/backtests/run", async (req, res) => {
+    try {
+      const { name, assetId, strategyId, period, initialCapital } = req.body;
+      
+      if (!name || !assetId || !strategyId) {
+        return res.status(400).json({ error: "Name, asset, and strategy are required" });
+      }
+
+      // Get the asset and strategy
+      const asset = await storage.getTradingAsset(assetId);
+      const strategy = await storage.getTradingStrategy(strategyId);
+      
+      if (!asset || !strategy) {
+        return res.status(404).json({ error: "Asset or strategy not found" });
+      }
+
+      // Calculate period in days
+      const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const endDate = new Date();
+      
+      // Get actual trading data for the period
+      const trades = await storage.getTradesByAsset(assetId, 1000);
+      const recentTrades = trades.filter(t => new Date(t.timestamp || Date.now()) >= startDate);
+      const actualTrades = recentTrades.filter(t => t.action === "BUY" || t.action === "SELL");
+      
+      if (actualTrades.length === 0) {
+        const result = await storage.createBacktestResult({
+          name,
+          assetId,
+          strategyId,
+          startDate,
+          endDate,
+          initialCapital: initialCapital.toString(),
+          finalCapital: initialCapital.toString(),
+          totalReturn: "0",
+          sharpeRatio: "0",
+          maxDrawdown: "0",
+          winRate: "0",
+          totalTrades: 0,
+          profitFactor: "1",
+          avgWin: "0",
+          avgLoss: "0",
+          results: { message: "No trading data available for the selected period" }
+        });
+        return res.json(result);
+      }
+
+      // Calculate performance metrics
+      let totalPnl = 0;
+      let wins = 0;
+      let losses = 0;
+      let maxDrawdownValue = 0;
+      let currentDrawdown = 0;
+      let runningTotal = initialCapital;
+      let peak = initialCapital;
+
+      for (const trade of actualTrades) {
+        const pnl = parseFloat(trade.pnl || "0");
+        totalPnl += pnl;
+        runningTotal += pnl;
+        
+        if (pnl > 0) wins++;
+        else if (pnl < 0) losses++;
+        
+        // Track drawdown
+        if (runningTotal > peak) {
+          peak = runningTotal;
+          currentDrawdown = 0;
+        } else {
+          currentDrawdown = (peak - runningTotal) / peak * 100;
+          maxDrawdownValue = Math.max(maxDrawdownValue, currentDrawdown);
+        }
+      }
+
+      const finalCapital = initialCapital + totalPnl;
+      const winRate = actualTrades.length > 0 ? (wins / actualTrades.length) * 100 : 0;
+      const totalReturnPercent = (totalPnl / initialCapital) * 100;
+      
+      // Calculate Sharpe ratio
+      const returns = actualTrades.map(t => parseFloat(t.pnl || "0") / initialCapital * 100);
+      const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+      const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+      const sharpeRatio = variance > 0 ? avgReturn / Math.sqrt(variance) : 0;
+
+      const winningTrades = actualTrades.filter(t => parseFloat(t.pnl || "0") > 0);
+      const losingTrades = actualTrades.filter(t => parseFloat(t.pnl || "0") < 0);
+      
+      const avgWin = winningTrades.length > 0 
+        ? winningTrades.reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0) / winningTrades.length 
+        : 0;
+      const avgLoss = losingTrades.length > 0
+        ? losingTrades.reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0) / losingTrades.length
+        : 0;
+
+      const profitFactor = Math.abs(avgLoss) > 0 ? Math.abs(avgWin / avgLoss) : 1;
+
+      const result = await storage.createBacktestResult({
+        name,
+        assetId,
+        strategyId,
+        startDate,
+        endDate,
+        initialCapital: initialCapital.toString(),
+        finalCapital: finalCapital.toString(),
+        totalReturn: totalReturnPercent.toString(),
+        sharpeRatio: sharpeRatio.toString(),
+        maxDrawdown: (-maxDrawdownValue).toString(),
+        winRate: winRate.toString(),
+        totalTrades: actualTrades.length,
+        profitFactor: profitFactor.toString(),
+        avgWin: avgWin.toString(),
+        avgLoss: avgLoss.toString(),
+        results: {
+          trades: actualTrades.length,
+          strategy: strategy.name,
+          asset: asset.symbol
+        }
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error running backtest:", error);
+      res.status(500).json({ error: "Failed to run backtest" });
+    }
+  });
+
+  app.delete("/api/backtests/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteBacktestResult(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Backtest result not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting backtest result:", error);
+      res.status(500).json({ error: "Failed to delete backtest result" });
+    }
+  });
+
   return httpServer;
 }

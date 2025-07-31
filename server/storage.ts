@@ -13,6 +13,10 @@ import {
   type InsertAiReflection,
   type AiDecisionLog,
   type InsertAiDecisionLog,
+  type TradingStrategy,
+  type InsertTradingStrategy,
+  type BacktestResult,
+  type InsertBacktestResult,
   type DashboardStats
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -54,6 +58,19 @@ export interface IStorage {
   createAiDecisionLog(log: InsertAiDecisionLog): Promise<AiDecisionLog>;
   exportAiDecisionLogsToJson(assetId?: string): Promise<string>;
   exportAiDecisionLogsToCsv(assetId?: string): Promise<string>;
+  
+  // Trading Strategies
+  getTradingStrategies(): Promise<TradingStrategy[]>;
+  getTradingStrategy(id: string): Promise<TradingStrategy | undefined>;
+  getDefaultTradingStrategy(): Promise<TradingStrategy | undefined>;
+  createTradingStrategy(strategy: InsertTradingStrategy): Promise<TradingStrategy>;
+  updateTradingStrategy(id: string, updates: Partial<TradingStrategy>): Promise<TradingStrategy | undefined>;
+  deleteTradingStrategy(id: string): Promise<boolean>;
+  
+  // Backtesting
+  getBacktestResults(limit?: number): Promise<BacktestResult[]>;
+  createBacktestResult(result: InsertBacktestResult): Promise<BacktestResult>;
+  deleteBacktestResult(id: string): Promise<boolean>;
   
   // Dashboard Stats
   calculateStats(assetId: string): Promise<DashboardStats>;
@@ -435,6 +452,105 @@ export class DatabaseStorage implements IStorage {
     });
     
     return [headers.join(","), ...csvRows].join("\n");
+  }
+
+  // Trading Strategies
+  async getTradingStrategies(): Promise<TradingStrategy[]> {
+    try {
+      const strategies = await db.select().from(tradingStrategies).orderBy(desc(tradingStrategies.createdAt));
+      return strategies;
+    } catch (error) {
+      console.error("Error fetching trading strategies:", error);
+      return [];
+    }
+  }
+
+  async getTradingStrategy(id: string): Promise<TradingStrategy | undefined> {
+    try {
+      const [strategy] = await db.select().from(tradingStrategies).where(eq(tradingStrategies.id, id));
+      return strategy || undefined;
+    } catch (error) {
+      console.error(`Error fetching trading strategy ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getDefaultTradingStrategy(): Promise<TradingStrategy | undefined> {
+    try {
+      const [strategy] = await db.select().from(tradingStrategies).where(eq(tradingStrategies.isDefault, true));
+      return strategy || undefined;
+    } catch (error) {
+      console.error("Error fetching default trading strategy:", error);
+      return undefined;
+    }
+  }
+
+  async createTradingStrategy(strategy: InsertTradingStrategy): Promise<TradingStrategy> {
+    try {
+      const [newStrategy] = await db.insert(tradingStrategies).values(strategy).returning();
+      return newStrategy;
+    } catch (error) {
+      console.error("Error creating trading strategy:", error);
+      throw error;
+    }
+  }
+
+  async updateTradingStrategy(id: string, updates: Partial<TradingStrategy>): Promise<TradingStrategy | undefined> {
+    try {
+      const [updated] = await db.update(tradingStrategies)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(tradingStrategies.id, id))
+        .returning();
+      return updated || undefined;
+    } catch (error) {
+      console.error(`Error updating trading strategy ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteTradingStrategy(id: string): Promise<boolean> {
+    try {
+      const [deleted] = await db.delete(tradingStrategies).where(eq(tradingStrategies.id, id)).returning();
+      return !!deleted;
+    } catch (error) {
+      console.error(`Error deleting trading strategy ${id}:`, error);
+      return false;
+    }
+  }
+
+  // Backtesting
+  async getBacktestResults(limit?: number): Promise<BacktestResult[]> {
+    try {
+      let query = db.select().from(backtestResults).orderBy(desc(backtestResults.createdAt));
+      if (limit) {
+        query = query.limit(limit);
+      }
+      const results = await query;
+      return results;
+    } catch (error) {
+      console.error("Error fetching backtest results:", error);
+      return [];
+    }
+  }
+
+  async createBacktestResult(result: InsertBacktestResult): Promise<BacktestResult> {
+    try {
+      const [newResult] = await db.insert(backtestResults).values(result).returning();
+      return newResult;
+    } catch (error) {
+      console.error("Error creating backtest result:", error);
+      throw error;
+    }
+  }
+
+  async deleteBacktestResult(id: string): Promise<boolean> {
+    try {
+      const [deleted] = await db.delete(backtestResults).where(eq(backtestResults.id, id)).returning();
+      return !!deleted;
+    } catch (error) {
+      console.error(`Error deleting backtest result ${id}:`, error);
+      return false;
+    }
   }
 }
 

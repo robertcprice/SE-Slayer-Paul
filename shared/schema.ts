@@ -91,6 +91,39 @@ export const aiDecisionLogs = pgTable("ai_decision_logs", {
   totalTokens: integer("total_tokens"),
 });
 
+// Trading Strategy Configuration
+export const tradingStrategies = pgTable("trading_strategies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  systemPrompt: text("system_prompt").notNull(),
+  personalityPrompt: text("personality_prompt").notNull(),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Backtesting Results
+export const backtestResults = pgTable("backtest_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  assetId: varchar("asset_id").references(() => tradingAssets.id),
+  strategyId: varchar("strategy_id").references(() => tradingStrategies.id),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  initialCapital: decimal("initial_capital", { precision: 18, scale: 2 }).default("10000"),
+  finalCapital: decimal("final_capital", { precision: 18, scale: 2 }),
+  totalReturn: decimal("total_return", { precision: 8, scale: 4 }),
+  maxDrawdown: decimal("max_drawdown", { precision: 8, scale: 4 }),
+  sharpeRatio: decimal("sharpe_ratio", { precision: 8, scale: 4 }),
+  winRate: decimal("win_rate", { precision: 5, scale: 2 }),
+  totalTrades: integer("total_trades"),
+  profitFactor: decimal("profit_factor", { precision: 8, scale: 4 }),
+  avgWin: decimal("avg_win", { precision: 18, scale: 2 }),
+  avgLoss: decimal("avg_loss", { precision: 18, scale: 2 }),
+  results: jsonb("results"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -127,6 +160,17 @@ export const insertAiDecisionLogSchema = createInsertSchema(aiDecisionLogs).omit
   timestamp: true,
 });
 
+export const insertTradingStrategySchema = createInsertSchema(tradingStrategies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBacktestResultSchema = createInsertSchema(backtestResults).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -148,6 +192,12 @@ export type InsertAiReflection = z.infer<typeof insertAiReflectionSchema>;
 
 export type AiDecisionLog = typeof aiDecisionLogs.$inferSelect;
 export type InsertAiDecisionLog = z.infer<typeof insertAiDecisionLogSchema>;
+
+export type TradingStrategy = typeof tradingStrategies.$inferSelect;
+export type InsertTradingStrategy = z.infer<typeof insertTradingStrategySchema>;
+
+export type BacktestResult = typeof backtestResults.$inferSelect;
+export type InsertBacktestResult = z.infer<typeof insertBacktestResultSchema>;
 
 // Dashboard data types
 export type DashboardStats = {

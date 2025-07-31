@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Database, Settings } from "lucide-react";
+import { TrendingUp, Database, Settings, FileEdit, BarChart3 } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -34,6 +34,28 @@ export function Navigation() {
               >
                 <Database className="h-4 w-4" />
                 AI Logs
+              </Button>
+            </Link>
+            
+            <Link href="/strategy-editor">
+              <Button 
+                variant={location === "/strategy-editor" ? "default" : "ghost"} 
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <FileEdit className="h-4 w-4" />
+                Strategy Editor
+              </Button>
+            </Link>
+            
+            <Link href="/backtesting">
+              <Button 
+                variant={location === "/backtesting" ? "default" : "ghost"} 
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Backtesting
               </Button>
             </Link>
             
