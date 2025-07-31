@@ -395,7 +395,7 @@ export class TradingService {
         }
       }
 
-      // Create trade record
+      // Create trade record with MANUAL marking
       const trade = await storage.createTrade({
         assetId: asset.id,
         action: tradeParams.action,
@@ -404,14 +404,14 @@ export class TradingService {
         positionSizing: "0", // Manual trades don't use position sizing
         stopLoss: null,
         takeProfit: null,
-        aiReasoning: `Manual ${tradeParams.action} order executed`,
+        aiReasoning: `MANUAL: ${tradeParams.action} order executed by user`,
         aiDecision: { 
           recommendation: tradeParams.action,
-          reasoning: `Manual ${tradeParams.action} order`,
+          reasoning: `MANUAL ${tradeParams.action} order`,
           manual: true 
         },
         executionResult: executionResult,
-        pnl: realPnl.toFixed(2),
+        pnl: realPnl.toString(),
       });
 
       // Update positions
@@ -456,19 +456,21 @@ export class TradingService {
           }
         }
       } else {
-        // Create new position for BUY orders
-        if (tradeParams.action === "BUY") {
-          await storage.createPosition({
-            assetId: asset.id,
-            symbol: asset.symbol,
-            side: "long",
-            quantity: tradeParams.quantity.toString(),
-            avgEntryPrice: executionPrice.toString(),
-            unrealizedPnl: "0",
-            isOpen: true,
-          });
-          console.log(`📈 Manual position opened for ${asset.symbol}: ${tradeParams.quantity.toFixed(8)} @ $${executionPrice.toFixed(2)}`);
-        }
+        // Create new position for both BUY and SELL orders
+        const positionSide = tradeParams.action === "BUY" ? "long" : "short";
+        
+        await storage.createPosition({
+          assetId: asset.id,
+          symbol: asset.symbol,
+          side: positionSide,
+          quantity: tradeParams.quantity.toString(),
+          avgEntryPrice: executionPrice.toString(),
+          unrealizedPnl: "0",
+          isOpen: true,
+        });
+        
+        const direction = positionSide === "long" ? "📈 LONG" : "📉 SHORT";
+        console.log(`Manual ${direction} position opened for ${asset.symbol}: ${tradeParams.quantity.toFixed(8)} @ $${executionPrice.toFixed(2)}`);
       }
 
       return {
@@ -558,7 +560,7 @@ export class TradingService {
       action: trade.action || '',
       quantity: trade.quantity || '0',
       price: trade.price || '0',
-      aiReasoning: trade.aiReasoning || '',
+      aiReasoning: trade.aiReasoning?.includes('MANUAL') ? trade.aiReasoning : trade.aiReasoning || '',
       pnl: parseFloat(trade.pnl || "0"),
     }));
 

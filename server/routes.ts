@@ -335,7 +335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Backtesting routes
   app.get("/api/backtests", async (req, res) => {
     try {
-      const results = await storage.getAllBacktestResults();
+      const results = await storage.getBacktestResults();
       res.json(results);
     } catch (error) {
       console.error("Error fetching backtest results:", error);
