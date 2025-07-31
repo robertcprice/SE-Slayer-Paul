@@ -5,11 +5,15 @@ import type { TradingAsset, DashboardStats, Position, TradeFeed, ChartData } fro
 interface AssetPanelProps {
   asset: TradingAsset;
   animationDelay: number;
+  onStatsUpdate?: (stats: DashboardStats, positions: Position[], trades: any[]) => void;
+  onPositionsUpdate?: (positions: Position[]) => void;
 }
 
 export default function AssetPanel({ 
   asset, 
-  animationDelay
+  animationDelay,
+  onStatsUpdate,
+  onPositionsUpdate
 }: AssetPanelProps) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<any>(null);
@@ -61,10 +65,16 @@ export default function AssetPanel({
         
         if (data.positions) {
           setPositions(data.positions);
+          onPositionsUpdate?.(data.positions);
         }
         
         if (data.feed) {
           setFeed(data.feed);
+        }
+
+        // Call parent update with current data
+        if (onStatsUpdate && (data.stats || data.positions || data.feed)) {
+          onStatsUpdate(stats, positions, feed);
         }
         
         if (data.reflection) {
