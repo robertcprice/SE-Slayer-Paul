@@ -1,4 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Position } from "@shared/schema";
 
 interface ActivePositionsProps {
@@ -8,6 +14,32 @@ interface ActivePositionsProps {
 export default function ActivePositions({ positions }: ActivePositionsProps) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<any>(null);
+  const [positionToClose, setPositionToClose] = useState<Position | null>(null);
+  const { toast } = useToast();
+
+  const closePositionMutation = useMutation({
+    mutationFn: async (positionId: string) => {
+      return await apiRequest(`/api/positions/${positionId}/close`, {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Position Closed",
+        description: "Position closed successfully",
+      });
+      setPositionToClose(null);
+      // Refresh the page to update all data
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Close Position",
+        description: error.message || "Failed to close position",
+        variant: "destructive",
+      });
+    },
+  });
 
   useEffect(() => {
     if (chartRef.current && window.Chart) {
@@ -107,6 +139,7 @@ export default function ActivePositions({ positions }: ActivePositionsProps) {
                     <th className="pb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">Quantity</th>
                     <th className="pb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">Entry Price</th>
                     <th className="pb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">P&L</th>
+                    <th className="pb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -130,6 +163,16 @@ export default function ActivePositions({ positions }: ActivePositionsProps) {
                         {parseFloat(position.unrealizedPnl || "0") >= 0 ? '+' : ''}
                         ${parseFloat(position.unrealizedPnl || "0").toFixed(2)}
                       </td>
+                      <td className="py-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPositionToClose(position)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -141,6 +184,44 @@ export default function ActivePositions({ positions }: ActivePositionsProps) {
           </>
         )}
       </div>
+
+      {/* Simple Close Position Confirmation Modal */}
+      {positionToClose && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4 glass-panel border-white/20">
+            <CardHeader>
+              <CardTitle className="text-white">Close Position</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-gray-300">
+                Are you sure you want to close the {positionToClose.side} position for {positionToClose.symbol}?
+                <br />
+                Quantity: {parseFloat(positionToClose.quantity || "0").toFixed(6)}
+                <br />
+                Current P&L: {parseFloat(positionToClose.unrealizedPnl || "0") >= 0 ? '+' : ''}
+                ${parseFloat(positionToClose.unrealizedPnl || "0").toFixed(2)}
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => closePositionMutation.mutate(positionToClose.id)}
+                  disabled={closePositionMutation.isPending}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  {closePositionMutation.isPending ? "Closing..." : "Close Position"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setPositionToClose(null)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

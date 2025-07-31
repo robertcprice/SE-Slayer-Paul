@@ -1017,6 +1017,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Close position endpoint
+  app.post("/api/positions/:positionId/close", async (req, res) => {
+    try {
+      const { positionId } = req.params;
+      
+      // Get the position
+      const position = await storage.getPosition(positionId);
+      if (!position || !position.isOpen) {
+        return res.status(404).json({ error: "Position not found or already closed" });
+      }
+
+      // Get the asset
+      const asset = await storage.getTradingAsset(position.assetId);
+      if (!asset) {
+        return res.status(404).json({ error: "Asset not found" });
+      }
+
+      // Close the position using the trading service
+      const result = await tradingService.closePosition(position, asset);
+      
+      res.json({ 
+        success: true, 
+        message: "Position closed successfully",
+        trade: result.trade
+      });
+    } catch (error: any) {
+      console.error("Close position error:", error);
+      res.status(500).json({ error: error.message || "Failed to close position" });
+    }
+  });
+
   // System Reset Endpoints
   app.post("/api/admin/export-and-reset", async (req, res) => {
     try {
