@@ -148,9 +148,15 @@ export default function TradingDashboard() {
   }, [colorConfig]);
 
   useEffect(() => {
-    // Apply initial gradient and animation class
+    // Apply initial gradient and animation class, but leave room for navigation
     document.body.className = "gradient-bg min-h-screen text-white font-inter";
     updateGradient();
+    
+    // Cleanup function to reset when component unmounts
+    return () => {
+      document.body.style.background = "";
+      document.body.className = "";
+    };
   }, []);
 
   // Fetch and aggregate data from all assets periodically
@@ -256,12 +262,12 @@ export default function TradingDashboard() {
   }
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative pt-14">
       {/* Gradient Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 pointer-events-none" />
       
       {/* Simple Theme Color Picker - Top Left */}
-      <div className="fixed top-4 left-4 z-50 flex gap-2">
+      <div className="fixed top-16 left-4 z-50 flex gap-2">
         <div
           className="w-6 h-6 rounded cursor-pointer border-2 border-white/30 hover:border-white/60 transition-colors"
           style={{ backgroundColor: colorConfig.color1 }}
@@ -289,7 +295,7 @@ export default function TradingDashboard() {
       </div>
 
       {/* Reset Controls - Top Right */}
-      <div className="fixed top-4 right-4 z-50 flex gap-2">
+      <div className="fixed top-16 right-4 z-50 flex gap-2">
         <Button
           onClick={() => setShowResetDialog(true)}
           variant="outline"
