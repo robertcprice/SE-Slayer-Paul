@@ -160,6 +160,15 @@ Preferred communication style: Simple, everyday language.
 - **API Endpoint**: New /api/trades/manual endpoint for executing direct trading orders
 - **Database Integration**: Manual trades stored alongside AI trades with execution metadata
 
+### July 31, 2025 - True Short Selling Implementation
+- **Bidirectional Trading**: Complete short selling support - SELL orders now open short positions when no long position exists
+- **Position Reversal Logic**: Sophisticated position management allowing seamless transitions between long and short positions
+- **Smart Position Sizing**: AI can now close existing positions and open opposite positions in single trade
+- **Enhanced AI Prompt**: Updated OpenAI prompt with detailed position management rules and sizing strategies
+- **Short Position P&L**: Proper profit/loss calculations for short positions (inverted from long positions)
+- **Position State Management**: System tracks both long and short positions with accurate quantity and entry price averaging
+- **Automated Position Transitions**: When SELL quantity exceeds long position, automatically closes long and opens short with remainder
+
 ### Active Trading Status  
 - **Database Persistence**: All historical logs and trades now permanently stored and accessible
 - **Trading Interval Control**: Proper 5-minute intervals enforced - no more multiple API calls within seconds

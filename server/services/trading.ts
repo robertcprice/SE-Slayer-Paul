@@ -217,65 +217,138 @@ export class TradingService {
       const openPosition = existingPositions.find(p => p.isOpen);
 
       if (openPosition) {
-        if (aiDecision.recommendation === "BUY") {
-          // Increase long position
-          const currentQuantity = parseFloat(openPosition.quantity || "0");
-          const currentAvgPrice = parseFloat(openPosition.avgEntryPrice || "0");
-          const newQuantity = currentQuantity + executedQty;
-          const avgPrice = ((currentAvgPrice * currentQuantity) + (executionResult.executedPrice * executedQty)) / newQuantity;
-          
-          await storage.updatePosition(openPosition.id, {
-            quantity: newQuantity.toString(),
-            avgEntryPrice: avgPrice.toString(),
-            unrealizedPnl: ((currentPrice - avgPrice) * newQuantity).toString(),
-          });
-          
-          console.log(`📈 Updated position for ${asset.symbol}: ${newQuantity.toFixed(8)} @ avg $${avgPrice.toFixed(2)}`);
-          
-        } else if (aiDecision.recommendation === "SELL") {
-          // Reduce or close long position
-          const currentQuantity = parseFloat(openPosition.quantity || "0");
-          if (executedQty >= currentQuantity) {
-            // Close entire position
-            const avgEntryPrice = parseFloat(openPosition.avgEntryPrice || "0");
-            const finalPnl = (executionResult.executedPrice - avgEntryPrice) * currentQuantity;
-            
-            await storage.updatePosition(openPosition.id, {
-              isOpen: false,
-              unrealizedPnl: "0",
-              closedAt: new Date(),
-            });
-            
-            console.log(`📉 Closed position for ${asset.symbol}: P&L $${finalPnl.toFixed(2)}`);
-            
-          } else {
-            // Partial close
-            const newQuantity = currentQuantity - executedQty;
-            const avgEntryPrice = parseFloat(openPosition.avgEntryPrice || "0");
+        const currentQuantity = parseFloat(openPosition.quantity || "0");
+        const currentSide = openPosition.side;
+        const avgEntryPrice = parseFloat(openPosition.avgEntryPrice || "0");
+
+        if (currentSide === "long") {
+          if (aiDecision.recommendation === "BUY") {
+            // Increase long position
+            const newQuantity = currentQuantity + executedQty;
+            const newAvgPrice = ((avgEntryPrice * currentQuantity) + (executionResult.executedPrice * executedQty)) / newQuantity;
             
             await storage.updatePosition(openPosition.id, {
               quantity: newQuantity.toString(),
-              unrealizedPnl: ((currentPrice - avgEntryPrice) * newQuantity).toString(),
+              avgEntryPrice: newAvgPrice.toString(),
+              unrealizedPnl: ((currentPrice - newAvgPrice) * newQuantity).toString(),
             });
             
-            console.log(`📉 Reduced position for ${asset.symbol}: ${newQuantity.toFixed(8)} remaining`);
+            console.log(`📈 Increased LONG position for ${asset.symbol}: ${newQuantity.toFixed(8)} @ avg $${newAvgPrice.toFixed(2)}`);
+            
+          } else if (aiDecision.recommendation === "SELL") {
+            if (executedQty >= currentQuantity) {
+              // Close long position and potentially open short
+              const finalPnl = (executionResult.executedPrice - avgEntryPrice) * currentQuantity;
+              
+              await storage.updatePosition(openPosition.id, {
+                isOpen: false,
+                unrealizedPnl: "0",
+                closedAt: new Date(),
+              });
+              
+              console.log(`📉 Closed LONG position for ${asset.symbol}: P&L $${finalPnl.toFixed(2)}`);
+              
+              // If sell quantity exceeds long position, open short with remaining
+              const remainingQty = executedQty - currentQuantity;
+              if (remainingQty > 0) {
+                await storage.createPosition({
+                  assetId: asset.id,
+                  symbol: asset.symbol,
+                  side: "short",
+                  quantity: remainingQty.toString(),
+                  avgEntryPrice: executionResult.executedPrice.toString(),
+                  unrealizedPnl: "0",
+                  isOpen: true,
+                });
+                
+                console.log(`📉 Opened SHORT position for ${asset.symbol}: ${remainingQty.toFixed(8)} @ $${executionResult.executedPrice.toFixed(2)}`);
+              }
+            } else {
+              // Partial close of long position
+              const newQuantity = currentQuantity - executedQty;
+              
+              await storage.updatePosition(openPosition.id, {
+                quantity: newQuantity.toString(),
+                unrealizedPnl: ((currentPrice - avgEntryPrice) * newQuantity).toString(),
+              });
+              
+              console.log(`📉 Reduced LONG position for ${asset.symbol}: ${newQuantity.toFixed(8)} remaining`);
+            }
+          }
+        } else if (currentSide === "short") {
+          if (aiDecision.recommendation === "SELL") {
+            // Increase short position
+            const newQuantity = currentQuantity + executedQty;
+            const newAvgPrice = ((avgEntryPrice * currentQuantity) + (executionResult.executedPrice * executedQty)) / newQuantity;
+            
+            await storage.updatePosition(openPosition.id, {
+              quantity: newQuantity.toString(),
+              avgEntryPrice: newAvgPrice.toString(),
+              unrealizedPnl: ((newAvgPrice - currentPrice) * newQuantity).toString(), // Inverted for shorts
+            });
+            
+            console.log(`📉 Increased SHORT position for ${asset.symbol}: ${newQuantity.toFixed(8)} @ avg $${newAvgPrice.toFixed(2)}`);
+            
+          } else if (aiDecision.recommendation === "BUY") {
+            if (executedQty >= currentQuantity) {
+              // Close short position and potentially open long
+              const finalPnl = (avgEntryPrice - executionResult.executedPrice) * currentQuantity; // Inverted for shorts
+              
+              await storage.updatePosition(openPosition.id, {
+                isOpen: false,
+                unrealizedPnl: "0",
+                closedAt: new Date(),
+              });
+              
+              console.log(`📈 Closed SHORT position for ${asset.symbol}: P&L $${finalPnl.toFixed(2)}`);
+              
+              // If buy quantity exceeds short position, open long with remaining
+              const remainingQty = executedQty - currentQuantity;
+              if (remainingQty > 0) {
+                await storage.createPosition({
+                  assetId: asset.id,
+                  symbol: asset.symbol,
+                  side: "long",
+                  quantity: remainingQty.toString(),
+                  avgEntryPrice: executionResult.executedPrice.toString(),
+                  unrealizedPnl: "0",
+                  isOpen: true,
+                });
+                
+                console.log(`📈 Opened LONG position for ${asset.symbol}: ${remainingQty.toFixed(8)} @ $${executionResult.executedPrice.toFixed(2)}`);
+              }
+            } else {
+              // Partial close of short position
+              const newQuantity = currentQuantity - executedQty;
+              
+              await storage.updatePosition(openPosition.id, {
+                quantity: newQuantity.toString(),
+                unrealizedPnl: ((avgEntryPrice - currentPrice) * newQuantity).toString(), // Inverted for shorts
+              });
+              
+              console.log(`📈 Reduced SHORT position for ${asset.symbol}: ${newQuantity.toFixed(8)} remaining`);
+            }
           }
         }
       } else {
-        // Create new position only for BUY orders
-        if (aiDecision.recommendation === "BUY") {
-          await storage.createPosition({
-            assetId: asset.id,
-            symbol: asset.symbol,
-            side: "long",
-            quantity: executedQty.toString(),
-            avgEntryPrice: executionResult.executedPrice.toString(),
-            unrealizedPnl: "0",
-            isOpen: true,
-          });
-          
-          console.log(`📈 New position opened for ${asset.symbol}: ${executedQty.toFixed(8)} @ $${executionResult.executedPrice.toFixed(2)}`);
-        }
+        // Create new position for both BUY and SELL orders
+        const positionSide = aiDecision.recommendation === "BUY" ? "long" : "short";
+        const unrealizedPnl = positionSide === "long" 
+          ? ((currentPrice - executionResult.executedPrice) * executedQty).toString()
+          : ((executionResult.executedPrice - currentPrice) * executedQty).toString();
+        
+        await storage.createPosition({
+          assetId: asset.id,
+          symbol: asset.symbol,
+          side: positionSide,
+          quantity: executedQty.toString(),
+          avgEntryPrice: executionResult.executedPrice.toString(),
+          unrealizedPnl: "0", // Start at 0, will be updated by periodic calculations
+          isOpen: true,
+        });
+        
+        const direction = positionSide === "long" ? "📈 LONG" : "📉 SHORT";
+        console.log(`${direction} position opened for ${asset.symbol}: ${executedQty.toFixed(8)} @ $${executionResult.executedPrice.toFixed(2)}`);
       }
     }
 

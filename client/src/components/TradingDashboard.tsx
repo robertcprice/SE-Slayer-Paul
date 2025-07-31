@@ -284,8 +284,8 @@ export default function TradingDashboard() {
                     <SelectValue placeholder="Select action" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BUY">Buy (Long)</SelectItem>
-                    <SelectItem value="SELL">Sell (Short)</SelectItem>
+                    <SelectItem value="BUY">Buy (Open Long / Close Short)</SelectItem>
+                    <SelectItem value="SELL">Sell (Open Short / Close Long)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

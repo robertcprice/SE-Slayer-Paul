@@ -112,6 +112,29 @@ When analyzing a trading opportunity, consider the following concepts:
 
 ${personalityPrompt ? `Trading Personality: ${personalityPrompt}\n` : ''}
 
+POSITION MANAGEMENT RULES:
+The trading system supports both LONG and SHORT positions with sophisticated position management:
+
+1. NO OPEN POSITION:
+   - BUY recommendation = Opens new LONG position
+   - SELL recommendation = Opens new SHORT position
+
+2. CURRENT LONG POSITION:
+   - BUY recommendation = Increases LONG position size
+   - SELL recommendation with quantity ≤ current position = Reduces/closes LONG position
+   - SELL recommendation with quantity > current position = Closes LONG + opens SHORT with remaining quantity
+
+3. CURRENT SHORT POSITION:
+   - SELL recommendation = Increases SHORT position size
+   - BUY recommendation with quantity ≤ current position = Reduces/closes SHORT position
+   - BUY recommendation with quantity > current position = Closes SHORT + opens LONG with remaining quantity
+
+POSITION SIZING STRATEGY:
+- Consider your current position when sizing new trades
+- To close a position: Set position_sizing to match or exceed current position
+- To reverse positions: Set position_sizing > current position (excess becomes new opposite position)
+- To add to position: Set position_sizing for additional quantity desired
+
 Here is the current position status:
 ${positionsStr}
 
@@ -129,14 +152,21 @@ Output a valid JSON object with these fields:
 - take_profit: Suggested take profit percentage (can be null)
 - next_cycle_seconds: (optional) If you think the bot should check again sooner than usual, set this to the number of seconds until the next check. Otherwise, set null or omit.
 
-Example output:
+Example outputs:
 {
   "recommendation": "BUY",
   "reasoning": "Price swept liquidity below equal lows and filled a 1h FVG; bullish order block formed at NY open; market structure shift to bullish.",
   "position_sizing": 15,
   "stop_loss": 2.5,
-  "take_profit": 7.0,
-  "next_cycle_seconds": 60
+  "take_profit": 7.0
+}
+
+{
+  "recommendation": "SELL",
+  "reasoning": "Break of structure to downside; swept equal highs creating liquidity; premium zone rejection indicates institutional selling.",
+  "position_sizing": 20,
+  "stop_loss": 3.0,
+  "take_profit": 8.0
 }
 `;
 
