@@ -341,14 +341,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
       const history = await storage.getPnlHistory(req.params.assetId, limit);
       
+      console.log(`P&L History API for ${req.params.assetId}: Found ${history.length} records`);
+      
+      // Reverse to get chronological order (oldest first)
+      const chronologicalHistory = history.reverse();
+      
       // Format for chart consumption
       const chartData = {
-        dates: history.map(h => h.timestamp?.toISOString() || new Date().toISOString()),
-        totalPnl: history.map(h => parseFloat(h.totalPnl || "0")),
-        unrealizedPnl: history.map(h => parseFloat(h.unrealizedPnl || "0")),
-        realizedPnl: history.map(h => parseFloat(h.realizedPnl || "0")),
-        positionValue: history.map(h => parseFloat(h.positionValue || "0")),
+        dates: chronologicalHistory.map(h => h.timestamp?.toISOString() || new Date().toISOString()),
+        totalPnl: chronologicalHistory.map(h => parseFloat(h.totalPnl || "0")),
+        unrealizedPnl: chronologicalHistory.map(h => parseFloat(h.unrealizedPnl || "0")),
+        realizedPnl: chronologicalHistory.map(h => parseFloat(h.realizedPnl || "0")),
+        positionValue: chronologicalHistory.map(h => parseFloat(h.positionValue || "0")),
       };
+      
+      console.log(`P&L Chart Data Sample:`, {
+        dates: chartData.dates.slice(0, 3),
+        totalPnl: chartData.totalPnl.slice(0, 3),
+        dataLength: chartData.dates.length
+      });
       
       res.json(chartData);
     } catch (error) {

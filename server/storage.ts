@@ -533,7 +533,7 @@ export class DatabaseStorage implements IStorage {
       // Calculate drawdown based on cumulative P&L
       let drawdown = 0;
       if (closingTrades.length > 0) {
-        const cumulativePnL = [];
+        const cumulativePnL: number[] = [];
         let runningTotal = 0;
         
         closingTrades.forEach(trade => {
@@ -577,13 +577,13 @@ export class DatabaseStorage implements IStorage {
       let query = db.select().from(aiDecisionLogs);
       
       if (assetId) {
-        query = query.where(eq(aiDecisionLogs.assetId, assetId));
+        query = query.where(eq(aiDecisionLogs.assetId, assetId)) as any;
       }
       
-      query = query.orderBy(desc(aiDecisionLogs.timestamp));
+      query = query.orderBy(desc(aiDecisionLogs.timestamp)) as any;
       
       if (limit) {
-        query = query.limit(limit);
+        query = query.limit(limit) as any;
       }
       
       return await query;

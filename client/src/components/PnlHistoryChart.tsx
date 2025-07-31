@@ -64,7 +64,24 @@ export default function PnlHistoryChart({ assetId, assetSymbol }: PnlHistoryProp
     );
   }
 
-  if (error || !pnlHistory || !pnlHistory.dates || pnlHistory.dates.length === 0) {
+  if (error) {
+    console.error('P&L History Error:', error);
+    return (
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle className="text-white">P&L History - {assetSymbol}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex items-center justify-center">
+            <div className="text-red-400">Error loading P&L history: {error.message}</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!pnlHistory || !pnlHistory.dates || pnlHistory.dates.length === 0) {
+    console.log('P&L History Debug:', { pnlHistory, assetId, assetSymbol });
     return (
       <Card className="col-span-full">
         <CardHeader>
@@ -79,10 +96,8 @@ export default function PnlHistoryChart({ assetId, assetSymbol }: PnlHistoryProp
     );
   }
 
-  // Calculate cumulative P&L (realized + unrealized)
-  const cumulativePnl = pnlHistory.totalPnl.map((total: number, index: number) => 
-    pnlHistory.realizedPnl[index] + pnlHistory.unrealizedPnl[index]
-  );
+  // Use the total P&L directly (already calculated on backend)
+  const cumulativePnl = pnlHistory.totalPnl || [];
 
   const chartData = {
     labels: pnlHistory.dates,
