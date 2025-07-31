@@ -17,6 +17,7 @@ function Router() {
       <Navigation />
       <Switch>
         <Route path="/" component={Dashboard} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/ai-logs" component={AiLogsPage} />
         <Route path="/admin" component={Admin} />
         <Route path="/strategy-editor" component={StrategyEditor} />

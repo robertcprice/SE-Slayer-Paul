@@ -222,6 +222,13 @@ export async function generateReflection(
   recentTrades: any[],
   stats: any
 ): Promise<{ reflection: string; improvements: string }> {
+  if (!recentTrades || recentTrades.length === 0) {
+    return {
+      reflection: "Insufficient trading data for analysis",
+      improvements: "Continue trading to gather performance data"
+    };
+  }
+
   const tradesText = recentTrades.map(trade => 
     `${trade.action} ${trade.quantity} @ ${trade.price} - ${trade.aiReasoning}`
   ).join('\n');
