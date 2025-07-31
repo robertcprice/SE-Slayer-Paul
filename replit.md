@@ -150,11 +150,23 @@ Preferred communication style: Simple, everyday language.
 - **OpenAI Service Enhancement**: Modified to use strategy-specific data configuration instead of fixed inputs
 - **Selective Technical Analysis**: AI now receives only the indicators specified in the strategy configuration
 
+### July 31, 2025 - Manual Trading Interface & Trade Execution Fix
+- **Manual Trading UI**: Added floating action button with modal interface for direct trade execution
+- **Asset Selection**: Dropdown menu for choosing BTC/USD, SOL/USD, or other configured assets
+- **Trade Parameters**: Input fields for quantity, optional price (defaults to market), and buy/sell actions
+- **Trade Execution Fix**: Modified trading service to always execute AI recommendations with simulated fills
+- **Position Management**: Enhanced position tracking with proper quantity and P&L calculations
+- **Real-time Updates**: Manual trades trigger WebSocket broadcasts for immediate dashboard updates
+- **API Endpoint**: New /api/trades/manual endpoint for executing direct trading orders
+- **Database Integration**: Manual trades stored alongside AI trades with execution metadata
+
 ### Active Trading Status  
 - **Database Persistence**: All historical logs and trades now permanently stored and accessible
 - **Trading Interval Control**: Proper 5-minute intervals enforced - no more multiple API calls within seconds
-- **Current BTC Position**: 0.113226311 BTC at $118,590.86 entry price with -$1.34 unrealized P&L
+- **Trade Execution**: AI recommendations now properly execute with simulated fills when Alpaca API unavailable
+- **Manual Trading**: Users can execute direct trades through dashboard interface with immediate position updates
+- **Position Tracking**: Real-time position updates showing quantity, entry price, and unrealized P&L
 - **Logging Infrastructure**: Both database and file-based logging operational for complete audit trail
-- **Real Portfolio**: Live connection to Alpaca paper trading account with real position data
+- **Real Portfolio**: Live connection to Alpaca paper trading account with simulated execution fallback
 - **Strategy Management**: ICT Smart Money Concepts strategy configured as default with conservative personality
 - **Backtesting Ready**: System can analyze historical performance using actual trading data from database
