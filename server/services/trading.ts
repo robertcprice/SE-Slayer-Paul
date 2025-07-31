@@ -60,7 +60,7 @@ export class TradingService {
       const openPositions = positions.filter(p => p.isOpen);
 
       // Get AI decision
-      const aiDecision = await analyzeMarketWithOpenAI(summary, asset.symbol, openPositions);
+      const aiDecision = await analyzeMarketWithOpenAI(summary, asset.symbol, openPositions, asset.id);
       console.log(`AI decision for ${asset.symbol}:`, aiDecision);
 
       // Execute trade based on AI decision

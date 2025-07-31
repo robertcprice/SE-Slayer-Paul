@@ -11,6 +11,8 @@ import {
   type InsertMarketData,
   type AiReflection,
   type InsertAiReflection,
+  type AiDecisionLog,
+  type InsertAiDecisionLog,
   type DashboardStats
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -46,6 +48,12 @@ export interface IStorage {
   getLatestReflection(assetId: string): Promise<AiReflection | undefined>;
   createReflection(reflection: InsertAiReflection): Promise<AiReflection>;
   
+  // AI Decision Logs
+  getAiDecisionLogs(assetId?: string, limit?: number): Promise<AiDecisionLog[]>;
+  createAiDecisionLog(log: InsertAiDecisionLog): Promise<AiDecisionLog>;
+  exportAiDecisionLogsToJson(assetId?: string): Promise<string>;
+  exportAiDecisionLogsToCsv(assetId?: string): Promise<string>;
+  
   // Dashboard Stats
   calculateStats(assetId: string): Promise<DashboardStats>;
 }
@@ -57,6 +65,7 @@ export class MemStorage implements IStorage {
   private positions: Map<string, Position>;
   private marketData: Map<string, MarketData>;
   private aiReflections: Map<string, AiReflection>;
+  private aiDecisionLogs: Map<string, AiDecisionLog>;
 
   constructor() {
     this.users = new Map();
@@ -65,6 +74,7 @@ export class MemStorage implements IStorage {
     this.positions = new Map();
     this.marketData = new Map();
     this.aiReflections = new Map();
+    this.aiDecisionLogs = new Map();
     
     // Initialize with default trading assets
     this.initializeDefaultAssets();
@@ -307,6 +317,91 @@ export class MemStorage implements IStorage {
       averageWin,
       averageLoss,
     };
+  }
+
+  // AI Decision Logs
+  async getAiDecisionLogs(assetId?: string, limit?: number): Promise<AiDecisionLog[]> {
+    let logs = Array.from(this.aiDecisionLogs.values());
+    
+    if (assetId) {
+      logs = logs.filter(log => log.assetId === assetId);
+    }
+    
+    // Sort by timestamp (newest first)
+    logs.sort((a, b) => {
+      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return timeB - timeA;
+    });
+    
+    if (limit) {
+      logs = logs.slice(0, limit);
+    }
+    
+    return logs;
+  }
+
+  async createAiDecisionLog(log: InsertAiDecisionLog): Promise<AiDecisionLog> {
+    const newLog: AiDecisionLog = {
+      id: randomUUID(),
+      timestamp: new Date(),
+      assetId: log.assetId || null,
+      symbol: log.symbol,
+      recommendation: log.recommendation,
+      reasoning: log.reasoning,
+      positionSizing: log.positionSizing || null,
+      stopLoss: log.stopLoss || null,
+      takeProfit: log.takeProfit || null,
+      nextCycleSeconds: log.nextCycleSeconds || null,
+      marketData: log.marketData || null,
+      rawResponse: log.rawResponse || null,
+      responseTimeMs: log.responseTimeMs || null,
+      modelUsed: log.modelUsed || "gpt-4o",
+      promptTokens: log.promptTokens || null,
+      completionTokens: log.completionTokens || null,
+      totalTokens: log.totalTokens || null,
+    };
+    
+    this.aiDecisionLogs.set(newLog.id, newLog);
+    return newLog;
+  }
+
+  async exportAiDecisionLogsToJson(assetId?: string): Promise<string> {
+    const logs = await this.getAiDecisionLogs(assetId);
+    return JSON.stringify(logs, null, 2);
+  }
+
+  async exportAiDecisionLogsToCsv(assetId?: string): Promise<string> {
+    const logs = await this.getAiDecisionLogs(assetId);
+    
+    if (logs.length === 0) {
+      return "timestamp,symbol,recommendation,reasoning,position_sizing,stop_loss,take_profit,response_time_ms,model_used,prompt_tokens,completion_tokens,total_tokens\n";
+    }
+    
+    const headers = [
+      "timestamp", "symbol", "recommendation", "reasoning", "position_sizing", 
+      "stop_loss", "take_profit", "response_time_ms", "model_used", 
+      "prompt_tokens", "completion_tokens", "total_tokens"
+    ];
+    
+    const csvRows = logs.map(log => {
+      return [
+        log.timestamp ? log.timestamp.toISOString() : "",
+        log.symbol,
+        log.recommendation,
+        `"${log.reasoning.replace(/"/g, '""')}"`, // Escape quotes in reasoning
+        log.positionSizing || "",
+        log.stopLoss || "",
+        log.takeProfit || "",
+        log.responseTimeMs || "",
+        log.modelUsed || "",
+        log.promptTokens || "",
+        log.completionTokens || "",
+        log.totalTokens || ""
+      ].join(",");
+    });
+    
+    return [headers.join(","), ...csvRows].join("\n");
   }
 }
 

@@ -68,6 +68,26 @@ export const aiReflections = pgTable("ai_reflections", {
   summary: jsonb("summary"),
 });
 
+export const aiDecisionLogs = pgTable("ai_decision_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assetId: varchar("asset_id").references(() => tradingAssets.id),
+  timestamp: timestamp("timestamp").defaultNow(),
+  symbol: text("symbol").notNull(),
+  recommendation: text("recommendation").notNull(), // BUY, SELL, HOLD
+  reasoning: text("reasoning").notNull(),
+  positionSizing: decimal("position_sizing", { precision: 5, scale: 2 }),
+  stopLoss: decimal("stop_loss", { precision: 5, scale: 2 }),
+  takeProfit: decimal("take_profit", { precision: 5, scale: 2 }),
+  nextCycleSeconds: integer("next_cycle_seconds"),
+  marketData: jsonb("market_data"), // The technical summary sent to AI
+  rawResponse: jsonb("raw_response"), // Complete OpenAI API response
+  responseTimeMs: integer("response_time_ms"), // Time taken for AI response
+  modelUsed: text("model_used").default("gpt-4o"),
+  promptTokens: integer("prompt_tokens"),
+  completionTokens: integer("completion_tokens"),
+  totalTokens: integer("total_tokens"),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -99,6 +119,11 @@ export const insertAiReflectionSchema = createInsertSchema(aiReflections).omit({
   timestamp: true,
 });
 
+export const insertAiDecisionLogSchema = createInsertSchema(aiDecisionLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -117,6 +142,9 @@ export type InsertMarketData = z.infer<typeof insertMarketDataSchema>;
 
 export type AiReflection = typeof aiReflections.$inferSelect;
 export type InsertAiReflection = z.infer<typeof insertAiReflectionSchema>;
+
+export type AiDecisionLog = typeof aiDecisionLogs.$inferSelect;
+export type InsertAiDecisionLog = z.infer<typeof insertAiDecisionLogSchema>;
 
 // Dashboard data types
 export type DashboardStats = {

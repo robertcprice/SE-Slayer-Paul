@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { Position } from "@shared/schema";
+import { storage } from "../storage";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -33,7 +34,8 @@ export interface MarketSummary {
 export async function analyzeMarketWithOpenAI(
   summary: MarketSummary, 
   asset: string, 
-  positions: Position[] = []
+  positions: Position[] = [],
+  assetId?: string
 ): Promise<AIDecision> {
   // Format positions for the prompt
   let positionsStr = "No open positions.";
@@ -91,6 +93,13 @@ Example output:
 }
 `;
 
+  // Track timing and create comprehensive log
+  const startTime = Date.now();
+  let aiDecision: AIDecision;
+  let responseTimeMs: number = 0;
+  let rawResponse: any = null;
+  let tokenUsage: any = null;
+
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -100,28 +109,65 @@ Example output:
       temperature: 0.2,
     });
 
+    responseTimeMs = Date.now() - startTime;
+    rawResponse = response;
+    tokenUsage = response.usage;
+
     const rawContent = response.choices[0].message.content;
     if (!rawContent) {
       throw new Error("No content received from OpenAI");
     }
 
-    const aiDecision = JSON.parse(rawContent) as AIDecision;
+    aiDecision = JSON.parse(rawContent) as AIDecision;
 
     // Set defaults if missing
     aiDecision.recommendation = aiDecision.recommendation || "HOLD";
     aiDecision.reasoning = aiDecision.reasoning || "No response from AI.";
     aiDecision.position_sizing = aiDecision.position_sizing || 0;
 
-    return aiDecision;
-
   } catch (error) {
+    responseTimeMs = Date.now() - startTime;
     console.error("OpenAI API error:", error);
-    return {
+    
+    aiDecision = {
       recommendation: "HOLD",
       reasoning: `OpenAI API error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       position_sizing: 0,
     };
   }
+
+  // Log every OpenAI response to database
+  try {
+    if (assetId) {
+      await storage.createAiDecisionLog({
+        assetId,
+        symbol: asset,
+        recommendation: aiDecision.recommendation,
+        reasoning: aiDecision.reasoning,
+        positionSizing: aiDecision.position_sizing?.toString() || null,
+        stopLoss: aiDecision.stop_loss?.toString() || null,
+        takeProfit: aiDecision.take_profit?.toString() || null,
+        nextCycleSeconds: aiDecision.next_cycle_seconds || null,
+        marketData: summary,
+        rawResponse,
+        responseTimeMs,
+        modelUsed: "gpt-4o",
+        promptTokens: tokenUsage?.prompt_tokens || null,
+        completionTokens: tokenUsage?.completion_tokens || null,
+        totalTokens: tokenUsage?.total_tokens || null,
+      });
+      
+      console.log(`✅ OpenAI decision logged for ${asset}:`, {
+        recommendation: aiDecision.recommendation,
+        responseTime: `${responseTimeMs}ms`,
+        tokens: tokenUsage?.total_tokens || 0,
+      });
+    }
+  } catch (logError) {
+    console.error("Failed to log AI decision:", logError);
+  }
+
+  return aiDecision;
 }
 
 export async function generateReflection(

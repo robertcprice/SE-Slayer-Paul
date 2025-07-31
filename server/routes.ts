@@ -30,6 +30,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Decision Logs API
+  app.get("/api/ai-logs", async (req, res) => {
+    try {
+      const { assetId, limit } = req.query;
+      const logs = await storage.getAiDecisionLogs(
+        assetId as string | undefined, 
+        limit ? parseInt(limit as string) : undefined
+      );
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch AI decision logs" });
+    }
+  });
+
+  app.get("/api/ai-logs/export/json", async (req, res) => {
+    try {
+      const { assetId } = req.query;
+      const jsonData = await storage.exportAiDecisionLogsToJson(assetId as string | undefined);
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="ai-decisions-${new Date().toISOString().split('T')[0]}.json"`);
+      res.send(jsonData);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to export AI logs as JSON" });
+    }
+  });
+
+  app.get("/api/ai-logs/export/csv", async (req, res) => {
+    try {
+      const { assetId } = req.query;
+      const csvData = await storage.exportAiDecisionLogsToCsv(assetId as string | undefined);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="ai-decisions-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csvData);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to export AI logs as CSV" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server setup - using specific path to avoid conflict with Vite HMR
