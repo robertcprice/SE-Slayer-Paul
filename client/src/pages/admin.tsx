@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, TrendingUp, Settings, BarChart3, Play, Pause } from "lucide-react";
+import { Activity, TrendingUp, Settings, BarChart3, Play, Pause, Key, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { AssetManagementPanel } from "@/components/AssetManagementPanel";
 
 interface SystemStats {
@@ -37,6 +39,142 @@ interface MarketSentiment {
     neutral: number;
     total: number;
   };
+}
+
+interface ApiKeyStatus {
+  alpacaApiKey: string | null;
+  alpacaSecretKey: string | null;  
+  openaiApiKey: string | null;
+  databaseUrl: string | null;
+}
+
+interface ApiTestResults {
+  alpaca: boolean;
+  openai: boolean;
+  database: boolean;
+}
+
+function ApiKeyManagementPanel() {
+  const { toast } = useToast();
+  const [testResults, setTestResults] = useState<ApiTestResults | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const { data: apiKeys } = useQuery<ApiKeyStatus>({
+    queryKey: ["/api/admin/api-keys"],
+    queryFn: () => apiRequest("/api/admin/api-keys")
+  });
+
+  const testApiKeys = async () => {
+    setIsTesting(true);
+    try {
+      const results = await apiRequest("/api/admin/api-keys/test", { method: "POST" });
+      setTestResults(results);
+      toast({
+        title: "API Key Test Complete",
+        description: "Check the results below"
+      });
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "Unable to test API keys",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const getStatusIcon = (isConfigured: boolean, isWorking?: boolean) => {
+    if (!isConfigured) return <XCircle className="h-4 w-4 text-red-400" />;
+    if (isWorking === undefined) return <AlertCircle className="h-4 w-4 text-yellow-400" />;
+    return isWorking ? <CheckCircle className="h-4 w-4 text-green-400" /> : <XCircle className="h-4 w-4 text-red-400" />;
+  };
+
+  const getStatusText = (isConfigured: boolean, isWorking?: boolean) => {
+    if (!isConfigured) return "Not Configured";
+    if (isWorking === undefined) return "Configured";
+    return isWorking ? "Working" : "Error";
+  };
+
+  const getStatusColor = (isConfigured: boolean, isWorking?: boolean) => {
+    if (!isConfigured) return "bg-red-500/20 text-red-400";
+    if (isWorking === undefined) return "bg-yellow-500/20 text-yellow-400";
+    return isWorking ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400";
+  };
+
+  return (
+    <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl text-slate-100 flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              API Key Management
+            </CardTitle>
+            <p className="text-slate-400">Monitor and test your API connections</p>
+          </div>
+          <Button onClick={testApiKeys} disabled={isTesting} variant="outline">
+            {isTesting ? "Testing..." : "Test All Keys"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(!!apiKeys?.alpacaApiKey, testResults?.alpaca)}
+                <span className="text-slate-300">Alpaca API Key</span>
+              </div>
+              <Badge className={getStatusColor(!!apiKeys?.alpacaApiKey, testResults?.alpaca)}>
+                {getStatusText(!!apiKeys?.alpacaApiKey, testResults?.alpaca)}
+              </Badge>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(!!apiKeys?.alpacaSecretKey, testResults?.alpaca)}
+                <span className="text-slate-300">Alpaca Secret Key</span>
+              </div>
+              <Badge className={getStatusColor(!!apiKeys?.alpacaSecretKey, testResults?.alpaca)}>
+                {getStatusText(!!apiKeys?.alpacaSecretKey, testResults?.alpaca)}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(!!apiKeys?.openaiApiKey, testResults?.openai)}
+                <span className="text-slate-300">OpenAI API Key</span>
+              </div>
+              <Badge className={getStatusColor(!!apiKeys?.openaiApiKey, testResults?.openai)}>
+                {getStatusText(!!apiKeys?.openaiApiKey, testResults?.openai)}
+              </Badge>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(!!apiKeys?.databaseUrl, testResults?.database)}
+                <span className="text-slate-300">Database Connection</span>
+              </div>
+              <Badge className={getStatusColor(!!apiKeys?.databaseUrl, testResults?.database)}>
+                {getStatusText(!!apiKeys?.databaseUrl, testResults?.database)}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 p-3 bg-slate-700/20 rounded-lg">
+          <p className="text-sm text-slate-400">
+            API keys are managed through environment variables. Contact your system administrator to update keys.
+            {!apiKeys?.alpacaApiKey && " Missing Alpaca keys will prevent trading."}
+            {!apiKeys?.openaiApiKey && " Missing OpenAI key will prevent AI analysis."}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function MarketSentimentPanel() {
@@ -214,9 +352,10 @@ export default function AdminPanel() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="backtest" className="space-y-6">
-          <TabsList className="grid grid-cols-3 w-full max-w-md bg-slate-800/50 border-slate-700">
+          <TabsList className="grid grid-cols-4 w-full max-w-2xl bg-slate-800/50 border-slate-700">
             <TabsTrigger value="backtest">Backtesting</TabsTrigger>
             <TabsTrigger value="sentiment">Market Sentiment</TabsTrigger>
+            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -302,6 +441,11 @@ export default function AdminPanel() {
           {/* Market Sentiment Tab */}
           <TabsContent value="sentiment" className="space-y-6">
             <MarketSentimentPanel />
+          </TabsContent>
+
+          {/* API Keys Tab */}
+          <TabsContent value="api-keys" className="space-y-6">
+            <ApiKeyManagementPanel />
           </TabsContent>
 
           {/* Settings Tab */}

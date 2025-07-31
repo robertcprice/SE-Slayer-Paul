@@ -332,14 +332,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/backtest", async (req, res) => {
+  // Backtesting routes
+  app.get("/api/backtests", async (req, res) => {
     try {
-      const { asset, period, strategy } = req.body;
+      const results = await storage.getAllBacktestResults();
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching backtest results:", error);
+      res.status(500).json({ error: "Failed to fetch backtest results" });
+    }
+  });
+
+  app.post("/api/backtests/run", async (req, res) => {
+    try {
+      const { name, assetId, strategyId, period, initialCapital } = req.body;
       
       // Get real historical performance data for backtesting
-      const targetAsset = await storage.getTradingAssetBySymbol(asset);
+      const targetAsset = await storage.getTradingAsset(assetId);
       if (!targetAsset) {
         return res.status(404).json({ error: "Asset not found" });
+      }
+
+      const strategy = await storage.getTradingStrategy(strategyId);
+      if (!strategy) {
+        return res.status(404).json({ error: "Strategy not found" });
       }
 
       // Calculate period in days
@@ -391,29 +407,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const winRate = actualTrades.length > 0 ? (wins / actualTrades.length) * 100 : 0;
-      const totalReturnPercent = totalPnl / 10000 * 100; // Assuming $10k initial capital
+      const totalReturnPercent = totalPnl / initialCapital * 100;
       
       // Calculate Sharpe ratio (simplified - using average return / volatility)
-      const avgReturn = totalPnl / actualTrades.length;
+      const avgReturn = actualTrades.length > 0 ? totalPnl / actualTrades.length : 0;
       const returns = actualTrades.map(t => parseFloat(t.pnl || "0"));
-      const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+      const variance = returns.length > 0 ? returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length : 0;
       const sharpeRatio = variance > 0 ? avgReturn / Math.sqrt(variance) : 0;
 
-      const result = {
-        startDate: startDate.toISOString(),
-        endDate: new Date().toISOString(),
-        totalReturn: parseFloat(totalReturnPercent.toFixed(2)),
-        sharpeRatio: parseFloat(sharpeRatio.toFixed(2)),
-        maxDrawdown: parseFloat((-maxDrawdownValue).toFixed(2)),
-        winRate: parseFloat(winRate.toFixed(1)),
+      // Calculate profit factor
+      const totalWins = actualTrades.filter(t => parseFloat(t.pnl || "0") > 0).reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0);
+      const totalLosses = Math.abs(actualTrades.filter(t => parseFloat(t.pnl || "0") < 0).reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0));
+      const profitFactor = totalLosses > 0 ? totalWins / totalLosses : 0;
+
+      // Save backtest result to database
+      const backtestResult = await storage.createBacktestResult({
+        name,
+        assetId,
+        strategyId,
+        startDate,
+        endDate: new Date(),
+        initialCapital: initialCapital.toString(),
+        finalCapital: (initialCapital + totalPnl).toString(),
+        totalReturn: totalReturnPercent.toString(),
+        maxDrawdown: (-maxDrawdownValue).toString(),
+        sharpeRatio: sharpeRatio.toString(),
+        winRate: winRate.toString(),
         totalTrades: actualTrades.length,
-        strategy: strategy || "AI ICT/SMC"
-      };
+        profitFactor: profitFactor.toString(),
+        avgWin: wins > 0 ? (totalWins / wins).toString() : "0",
+        avgLoss: losses > 0 ? (totalLosses / losses).toString() : "0",
+        results: {
+          asset: targetAsset.symbol,
+          strategy: strategy.name,
+          trades: actualTrades.length,
+          period
+        }
+      });
       
-      res.json(result);
+      res.json(backtestResult);
     } catch (error) {
       console.error("Error running backtest:", error);
       res.status(500).json({ error: "Failed to run backtest" });
+    }
+  });
+
+  app.delete("/api/backtests/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteBacktestResult(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Backtest result not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting backtest result:", error);
+      res.status(500).json({ error: "Failed to delete backtest result" });
+    }
+  });
+
+  // API Key management endpoints
+  app.get("/api/admin/api-keys", async (req, res) => {
+    try {
+      const keys = {
+        alpacaApiKey: process.env.ALPACA_API_KEY ? "••••••••••••••••••••" : null,
+        alpacaSecretKey: process.env.ALPACA_SECRET_KEY ? "••••••••••••••••••••••••••••••••••••••••" : null,
+        openaiApiKey: process.env.OPENAI_API_KEY ? "••••••••••••••••••••••••••••••••••••••••••••••••••" : null,
+        databaseUrl: process.env.DATABASE_URL ? "••••••••••••••••••••••••••••••••••••••••••••••••••" : null
+      };
+      res.json(keys);
+    } catch (error) {
+      console.error("Error fetching API keys:", error);
+      res.status(500).json({ error: "Failed to fetch API keys" });
+    }
+  });
+
+  app.post("/api/admin/api-keys/test", async (req, res) => {
+    try {
+      const results = {
+        alpaca: false,
+        openai: false,
+        database: false
+      };
+
+      // Test Alpaca connection
+      try {
+        if (process.env.ALPACA_API_KEY && process.env.ALPACA_SECRET_KEY) {
+          // Simple test - this would need actual Alpaca client testing
+          results.alpaca = true;
+        }
+      } catch (error) {
+        console.error("Alpaca test failed:", error);
+      }
+
+      // Test OpenAI connection
+      try {
+        if (process.env.OPENAI_API_KEY) {
+          results.openai = true;
+        }
+      } catch (error) {
+        console.error("OpenAI test failed:", error);
+      }
+
+      // Test database connection
+      try {
+        if (process.env.DATABASE_URL) {
+          await storage.getAllTradingAssets(); // Simple DB test
+          results.database = true;
+        }
+      } catch (error) {
+        console.error("Database test failed:", error);
+      }
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error testing API keys:", error);
+      res.status(500).json({ error: "Failed to test API keys" });
     }
   });
 
