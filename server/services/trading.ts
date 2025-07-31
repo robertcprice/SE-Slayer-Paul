@@ -556,12 +556,14 @@ export class TradingService {
       };
     }
 
-    // Get BOTH real positions from Alpaca AND internal database positions
+    // Get BOTH real positions from Alpaca AND internal database positions - STRICT ASSET FILTERING
     let positions: Position[] = [];
     try {
-      // First get internal database positions
+      // First get internal database positions - ONLY for this specific asset
       const dbPositions = await storage.getPositionsByAsset(asset.id);
-      positions = [...dbPositions];
+      // Double-check asset ID filtering to prevent contamination
+      const filteredDbPositions = dbPositions.filter(p => p.assetId === asset.id);
+      positions = [...filteredDbPositions];
       
       // Then try to get Alpaca positions and merge them
       const alpacaPositions = await alpacaClient.getPositions();
@@ -571,7 +573,7 @@ export class TradingService {
         const alpacaPos = assetPositions.map(pos => ({
           id: `alpaca-${pos.symbol}`,
           openedAt: new Date(),
-          assetId: asset.id,
+          assetId: asset.id, // Ensure correct asset ID
           symbol: assetSymbol,
           side: pos.side,
           quantity: pos.qty,
@@ -584,13 +586,13 @@ export class TradingService {
         positions.push(...alpacaPos);
       }
       
-      console.log(`📊 Combined positions for ${assetSymbol}: ${positions.length} total (${dbPositions.length} internal + ${assetPositions?.length || 0} Alpaca)`);
+      console.log(`📊 Combined positions for ${assetSymbol}: ${positions.length} total (${filteredDbPositions.length} internal + ${assetPositions?.length || 0} Alpaca)`);
       
     } catch (error) {
       console.error(`Failed to get real positions for ${assetSymbol}:`, error);
-      // Fallback to stored positions only
+      // Fallback to stored positions only - with strict filtering
       const dbPositions = await storage.getPositionsByAsset(asset.id);
-      positions = [...dbPositions];
+      positions = dbPositions.filter(p => p.assetId === asset.id);
     }
 
 

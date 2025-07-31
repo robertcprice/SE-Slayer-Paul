@@ -19,6 +19,7 @@ export default function ActivePositions({ positions }: ActivePositionsProps) {
 
   const closePositionMutation = useMutation({
     mutationFn: async (positionId: string) => {
+      console.log(`Attempting to close position: ${positionId}`);
       return await apiRequest(`/api/positions/${positionId}/close`, {
         method: "POST",
       });

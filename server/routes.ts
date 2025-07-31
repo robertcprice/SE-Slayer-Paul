@@ -1018,12 +1018,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Close position endpoint
-  app.post("/api/positions/:positionId/close", async (req, res) => {
+  app.post("/api/positions/:id/close", async (req, res) => {
     try {
-      const { positionId } = req.params;
+      const { id } = req.params;
       
       // Get the position
-      const position = await storage.getPosition(positionId);
+      const position = await storage.getPosition(id);
       if (!position || !position.isOpen) {
         return res.status(404).json({ error: "Position not found or already closed" });
       }
