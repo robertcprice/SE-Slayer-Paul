@@ -674,11 +674,18 @@ export class TradingService {
       console.log(`📊 Real total P&L for ${assetSymbol}: $${totalRealPnl.toFixed(2)}`);
     }
 
-    // Get ONLY real trades from Alpaca API - no fake internal trades
-    const actualTrades: any[] = []; // Remove fake trades completely
-    
-    // NO fake trade feed - only show real Alpaca trades
-    const feed: TradeFeed[] = [];
+    // Get completed trades from our database (trades created when positions were closed)
+    const completedTrades = await storage.getRecentTrades(asset.id, 20);
+    const feed: TradeFeed[] = completedTrades
+      .filter(trade => trade.pnl && Math.abs(parseFloat(trade.pnl)) > 0.01) // Only trades with meaningful P&L
+      .map(trade => ({
+        action: trade.action,
+        quantity: trade.quantity,
+        price: trade.price,
+        timestamp: trade.timestamp || new Date(),
+        pnl: parseFloat(trade.pnl || "0"),
+      }))
+      .slice(0, 10); // Show last 10 completed trades
 
     // Get latest reflection
     const latestReflection = await storage.getLatestReflection(asset.id);

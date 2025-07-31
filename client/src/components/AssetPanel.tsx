@@ -316,7 +316,7 @@ export default function AssetPanel({
 
       {/* Current Positions */}
       <div className="bg-gray-900/50 rounded-2xl p-4 mb-4">
-        <h3 className="text-lg font-bold uppercase tracking-wide text-cyan-300 mb-3">
+        <h3 className="text-lg font-bold uppercase tracking-wide text-white mb-3">
           Current Positions
         </h3>
         <div className="space-y-2 text-sm">
@@ -353,7 +353,7 @@ export default function AssetPanel({
 
       {/* Completed Trades Feed */}
       <div className="bg-gray-900/50 rounded-2xl p-4 mb-4">
-        <h3 className="text-lg font-bold uppercase tracking-wide text-cyan-300 mb-3">
+        <h3 className="text-lg font-bold uppercase tracking-wide text-white mb-3">
           Completed Trades
         </h3>
         <div className="max-h-48 overflow-y-auto space-y-2 text-sm scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
@@ -398,7 +398,7 @@ export default function AssetPanel({
 
       {/* AI Insights */}
       <div className="bg-gray-900/50 rounded-2xl p-4">
-        <h3 className="text-lg font-bold uppercase tracking-wide text-cyan-300 mb-3">
+        <h3 className="text-lg font-bold uppercase tracking-wide text-white mb-3">
           🤖 AI Analysis
         </h3>
         <div className="text-sm">

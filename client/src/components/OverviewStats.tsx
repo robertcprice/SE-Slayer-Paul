@@ -16,7 +16,7 @@ export default function OverviewStats({ stats, accountBalance }: OverviewStatsPr
   return (
     <div className="glass-panel rounded-3xl p-6 mb-8 animate-slide-up">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold uppercase tracking-wide text-cyan-300">
+        <h2 className="text-2xl font-bold uppercase tracking-wide text-white">
           Portfolio Overview
         </h2>
         {accountBalance && (

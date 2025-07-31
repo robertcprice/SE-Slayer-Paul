@@ -171,7 +171,7 @@ export default function PortfolioChart() {
         <CardTitle className="text-white">Portfolio Performance</CardTitle>
         <p className="text-white/60 text-sm">
           {portfolioHistory?.length > 0 
-            ? `${portfolioHistory.length} data points (30-minute intervals)`
+            ? `${portfolioHistory.length} data points (5-minute intervals)`
             : "Portfolio tracking started - data will appear after first logging cycle"
           }
         </p>
@@ -182,7 +182,7 @@ export default function PortfolioChart() {
             <canvas ref={chartRef} className="w-full h-full"></canvas>
           ) : (
             <div className="h-full flex items-center justify-center text-white/60">
-              <p>Portfolio data will be logged every 30 minutes...</p>
+              <p>Portfolio data will be logged every 5 minutes...</p>
             </div>
           )}
         </div>
