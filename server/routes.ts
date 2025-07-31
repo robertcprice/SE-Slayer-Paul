@@ -47,6 +47,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+
   // AI Decision Logs API
   app.get("/api/ai-logs", async (req, res) => {
     try {

@@ -547,8 +547,16 @@ export class TradingService {
       throw new Error(`Asset ${assetSymbol} not found`);
     }
 
-    // Get stats from database
-    const stats = await storage.calculateStats(asset.id);
+    // CRITICAL FIX: Calculate stats using ONLY real Alpaca positions, not database
+    let stats: DashboardStats = {
+      totalPnl: 0,
+      winRate: 0,
+      sharpeRatio: 0,
+      totalTrades: 0,
+      drawdown: 0,
+      averageWin: 0,
+      averageLoss: 0,
+    };
 
     // Get real market data from Alpaca
     let chart: ChartData = { dates: [], close: [], volume: [] };
@@ -593,7 +601,7 @@ export class TradingService {
             side: pos.side,
             quantity: pos.qty,
             avgEntryPrice: pos.avg_entry_price,
-            unrealizedPnl: pos.unrealized_pl, // Use real Alpaca P&L
+            unrealizedPnl: realPnl.toString(), // Use parsed real Alpaca P&L
             isOpen: true,
             closedAt: null,
           };
@@ -652,27 +660,18 @@ export class TradingService {
       }
     }
 
-    // CRITICAL FIX: Update all open positions' unrealized P&L with current prices
-    for (const position of positions.filter(p => p.isOpen)) {
-      const avgEntry = parseFloat(position.avgEntryPrice || "0");
-      const quantity = parseFloat(position.quantity || "0");
+    // DON'T recalculate P&L - use REAL Alpaca values only!
+    // Positions already have the correct unrealized_pl from Alpaca API
+
+    // CRITICAL FIX: Calculate REAL stats from REAL Alpaca positions only
+    if (positions.length > 0) {
+      // Calculate total P&L from real Alpaca positions
+      const totalRealPnl = positions.reduce((sum, pos) => {
+        return sum + parseFloat(pos.unrealizedPnl || "0");
+      }, 0);
       
-      let unrealizedPnl = 0;
-      if (position.side === "long") {
-        unrealizedPnl = (currentPrice - avgEntry) * quantity;
-      } else if (position.side === "short") {
-        unrealizedPnl = (avgEntry - currentPrice) * quantity;
-      }
-      
-      // Update the position's unrealized P&L in the database
-      if (position.id && !position.id.startsWith('alpaca-')) {
-        await storage.updatePosition(position.id, {
-          unrealizedPnl: unrealizedPnl.toFixed(2)
-        });
-      }
-      
-      // Update the position object for immediate display
-      position.unrealizedPnl = unrealizedPnl.toFixed(2);
+      stats.totalPnl = totalRealPnl;
+      console.log(`📊 Real total P&L for ${assetSymbol}: $${totalRealPnl.toFixed(2)}`);
     }
 
     // Get ONLY real trades from Alpaca API - no fake internal trades
