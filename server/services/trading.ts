@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import { DataClient } from "./dataClient";
+import { alpacaClient } from "./alpaca";
 import { analyzeMarketWithOpenAI, generateReflection, type MarketSummary } from "./openai";
 import type { 
   TradingAsset, 
@@ -123,14 +124,62 @@ export class TradingService {
   }
 
   private async executeTrade(asset: TradingAsset, aiDecision: any, latestData: any): Promise<Trade> {
-    // Simulate trade execution
-    const currentPrice = latestData.close;
-    const accountEquity = 10000; // Mock account equity
+    // Get real current price from Alpaca
+    let currentPrice = latestData.close;
+    try {
+      const realPrice = await alpacaClient.getLatestPrice(asset.symbol);
+      if (realPrice) {
+        currentPrice = realPrice;
+      }
+    } catch (error) {
+      console.error(`Failed to get latest price for ${asset.symbol}, using historical:`, error);
+    }
+
+    // Get account equity from Alpaca
+    let accountEquity = 10000; // Default fallback
+    try {
+      const account = await alpacaClient.getAccount();
+      accountEquity = parseFloat(account.equity);
+    } catch (error) {
+      console.error('Failed to get account equity:', error);
+    }
+
     const positionValue = accountEquity * (aiDecision.position_sizing / 100);
     const quantity = positionValue / currentPrice;
 
-    // Calculate mock P&L (simplified)
-    const mockPnl = (Math.random() - 0.4) * positionValue * 0.1; // Slight positive bias
+    // Execute real trade through Alpaca
+    let executionResult: any = {
+      status: "FAILED",
+      executedQuantity: 0,
+      executedPrice: currentPrice,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      let order;
+      if (aiDecision.recommendation === "BUY") {
+        order = await alpacaClient.placeBuyOrder(asset.symbol, quantity.toFixed(8));
+      } else if (aiDecision.recommendation === "SELL") {
+        order = await alpacaClient.placeSellOrder(asset.symbol, quantity.toFixed(8));
+      }
+
+      if (order) {
+        executionResult = {
+          status: order.status || "SUBMITTED",
+          executedQuantity: parseFloat(order.filled_qty || "0"),
+          executedPrice: parseFloat(order.filled_avg_price || currentPrice.toString()),
+          timestamp: new Date().toISOString(),
+          orderId: order.id,
+        };
+      }
+    } catch (error) {
+      console.error(`Failed to execute ${aiDecision.recommendation} order for ${asset.symbol}:`, error);
+      // Continue with simulated trade for logging purposes
+    }
+
+    // Calculate P&L based on execution
+    const realPnl = executionResult.status === "FILLED" ? 
+      (executionResult.executedPrice - currentPrice) * executionResult.executedQuantity : 0;
 
     // Create trade record
     const trade = await storage.createTrade({
@@ -143,13 +192,8 @@ export class TradingService {
       takeProfit: aiDecision.take_profit?.toString(),
       aiReasoning: aiDecision.reasoning,
       aiDecision: aiDecision,
-      executionResult: {
-        status: "FILLED",
-        executedQuantity: quantity,
-        executedPrice: currentPrice,
-        timestamp: new Date().toISOString(),
-      },
-      pnl: mockPnl.toFixed(2),
+      executionResult: executionResult,
+      pnl: realPnl.toFixed(2),
     });
 
     // Update or create position
@@ -160,7 +204,7 @@ export class TradingService {
       // Update existing position
       await storage.updatePosition(openPosition.id, {
         quantity: (parseFloat(openPosition.quantity || "0") + quantity).toString(),
-        unrealizedPnl: mockPnl.toString(),
+        unrealizedPnl: realPnl.toString(),
       });
     } else {
       // Create new position
@@ -190,19 +234,59 @@ export class TradingService {
       throw new Error(`Asset ${assetSymbol} not found`);
     }
 
-    // Get stats
+    // Get stats from database
     const stats = await storage.calculateStats(asset.id);
 
-    // Get chart data
-    const marketData = await storage.getLatestMarketData(asset.id, 30);
-    const chart: ChartData = {
-      dates: marketData.map(d => d.timestamp?.toISOString().split('T')[0] || ''),
-      close: marketData.map(d => parseFloat(d.close || "0")),
-      volume: marketData.map(d => parseFloat(d.volume || "0")),
-    };
+    // Get real market data from Alpaca
+    let chart: ChartData = { dates: [], close: [], volume: [] };
+    try {
+      const alpacaData = await alpacaClient.getMarketData(assetSymbol, '1Min', 50);
+      if (alpacaData.length > 0) {
+        chart = {
+          dates: alpacaData.map(d => d.timestamp.toISOString().split('T')[0]),
+          close: alpacaData.map(d => d.close),
+          volume: alpacaData.map(d => d.volume),
+        };
+      }
+    } catch (error) {
+      console.error(`Failed to get real market data for ${assetSymbol}:`, error);
+      // Fallback to stored data if Alpaca fails
+      const marketData = await storage.getLatestMarketData(asset.id, 30);
+      chart = {
+        dates: marketData.map(d => d.timestamp?.toISOString().split('T')[0] || ''),
+        close: marketData.map(d => parseFloat(d.close || "0")),
+        volume: marketData.map(d => parseFloat(d.volume || "0")),
+      };
+    }
 
-    // Get positions
-    const positions = await storage.getPositionsByAsset(asset.id);
+    // Get real positions from Alpaca
+    let positions: Position[] = [];
+    try {
+      const alpacaPositions = await alpacaClient.getPositions();
+      const assetPositions = alpacaPositions.filter(p => p.symbol === assetSymbol.replace('/', ''));
+      
+      if (assetPositions.length > 0) {
+        positions = assetPositions.map(pos => ({
+          id: `alpaca-${pos.symbol}`,
+          openedAt: new Date(),
+          assetId: asset.id,
+          symbol: assetSymbol,
+          side: pos.side,
+          quantity: pos.qty,
+          avgEntryPrice: (parseFloat(pos.cost_basis) / parseFloat(pos.qty)).toString(),
+          unrealizedPnl: pos.unrealized_pl,
+          isOpen: true,
+          closedAt: null,
+        }));
+      } else {
+        // Fallback to stored positions
+        positions = await storage.getPositionsByAsset(asset.id);
+      }
+    } catch (error) {
+      console.error(`Failed to get real positions for ${assetSymbol}:`, error);
+      // Fallback to stored positions
+      positions = await storage.getPositionsByAsset(asset.id);
+    }
 
     // Get recent trades for feed
     const recentTrades = await storage.getTradesByAsset(asset.id, 10);
