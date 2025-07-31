@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { DashboardStats, Position, TradingAsset } from "@shared/schema";
+import type { DashboardStats, Position, TradingAsset, AccountBalance } from "@shared/schema";
 
 export default function TradingDashboard() {
   const [colorConfig, setColorConfig] = useState({
@@ -136,6 +136,7 @@ export default function TradingDashboard() {
 
   const [allPositions, setAllPositions] = useState<Position[]>([]);
   const [allTrades, setAllTrades] = useState<any[]>([]);
+  const [accountBalance, setAccountBalance] = useState<AccountBalance | undefined>(undefined);
 
   const updateGradient = () => {
     document.body.style.background = `linear-gradient(-45deg, ${colorConfig.color1}, ${colorConfig.color2})`;
@@ -163,11 +164,17 @@ export default function TradingDashboard() {
       let totalTrades = 0;
       let totalWinRate = 0;
       let assetCount = 0;
+      let latestAccountBalance: AccountBalance | undefined;
 
       for (const asset of assets) {
         try {
           const response = await fetch(`/api/assets/${encodeURIComponent(asset.symbol)}/dashboard`);
           const data = await response.json();
+          
+          // Store account balance from first asset (same for all)
+          if (data.accountBalance && !latestAccountBalance) {
+            latestAccountBalance = data.accountBalance;
+          }
           
           // Calculate real P&L from positions
           const assetPnl = data.positions
@@ -199,6 +206,11 @@ export default function TradingDashboard() {
         averageWin: 0,
         averageLoss: 0,
       });
+      
+      // Update account balance
+      if (latestAccountBalance) {
+        setAccountBalance(latestAccountBalance);
+      }
     };
 
     fetchAggregateData();
@@ -311,7 +323,7 @@ export default function TradingDashboard() {
 
       <div className="container mx-auto px-4 pb-8">
         {/* Overview Stats */}
-        <OverviewStats stats={aggregateStats} />
+        <OverviewStats stats={aggregateStats} accountBalance={accountBalance} />
 
         {/* Active Positions */}
         <ActivePositions positions={allPositions} />

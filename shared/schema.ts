@@ -231,6 +231,14 @@ export type TradeFeed = {
   pnl?: number;
 };
 
+export type AccountBalance = {
+  equity: string;
+  cash: string;
+  buyingPower: string;
+  dayTradeCount: number;
+  status: string;
+};
+
 export type WebSocketMessage = {
   action?: 'pause' | 'resume' | 'set_interval';
   interval?: number;
@@ -242,4 +250,5 @@ export type WebSocketMessage = {
   improvements?: string;
   paused?: boolean;
   asset?: string;
+  accountBalance?: AccountBalance;
 };

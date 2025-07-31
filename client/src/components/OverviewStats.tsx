@@ -1,10 +1,11 @@
-import type { DashboardStats } from "@shared/schema";
+import type { DashboardStats, AccountBalance } from "@shared/schema";
 
 interface OverviewStatsProps {
   stats: DashboardStats;
+  accountBalance?: AccountBalance;
 }
 
-export default function OverviewStats({ stats }: OverviewStatsProps) {
+export default function OverviewStats({ stats, accountBalance }: OverviewStatsProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -14,9 +15,25 @@ export default function OverviewStats({ stats }: OverviewStatsProps) {
 
   return (
     <div className="glass-panel rounded-3xl p-6 mb-8 animate-slide-up">
-      <h2 className="text-2xl font-bold uppercase tracking-wide mb-6 text-cyan-300">
-        Portfolio Overview
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold uppercase tracking-wide text-cyan-300">
+          Portfolio Overview
+        </h2>
+        {accountBalance && (
+          <div className="text-right">
+            <div className="text-lg font-bold text-green-400">
+              {formatCurrency(parseFloat(accountBalance.equity))}
+            </div>
+            <div className="text-xs uppercase tracking-wide text-gray-300">
+              Account Balance ({accountBalance.status})
+            </div>
+            <div className="text-xs text-gray-400">
+              Cash: {formatCurrency(parseFloat(accountBalance.cash))} | 
+              Buying Power: {formatCurrency(parseFloat(accountBalance.buyingPower))}
+            </div>
+          </div>
+        )}
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <div className="text-center">
           <div className={`text-3xl font-black ${stats.totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>

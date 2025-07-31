@@ -9,7 +9,8 @@ import type {
   DashboardStats, 
   ChartData, 
   TradeFeed,
-  WebSocketMessage 
+  WebSocketMessage,
+  AccountBalance
 } from "@shared/schema";
 
 export interface TradingCycleResult {
@@ -487,6 +488,7 @@ export class TradingService {
     positions: Position[];
     feed: TradeFeed[];
     reflection?: { reflection: string; improvements: string };
+    accountBalance?: AccountBalance;
   }> {
     const asset = await storage.getTradingAssetBySymbol(assetSymbol);
     if (!asset) {
@@ -582,7 +584,31 @@ export class TradingService {
       improvements: latestReflection.improvements || '',
     } : undefined;
 
-    return { stats, chart, positions, feed, reflection };
+    // Get account balance from Alpaca
+    let accountBalance: AccountBalance | undefined;
+    try {
+      const account = await alpacaClient.getAccount();
+      accountBalance = {
+        equity: account.equity || "0",
+        cash: account.cash || "0", 
+        buyingPower: account.buying_power || "0",
+        dayTradeCount: account.day_trade_count || 0,
+        status: account.status || "UNKNOWN"
+      };
+      console.log(`💰 Account Balance: $${accountBalance.equity} equity, $${accountBalance.cash} cash`);
+    } catch (error) {
+      console.error(`Failed to get account balance:`, error);
+      // Provide fallback demo balance when Alpaca is not accessible
+      accountBalance = {
+        equity: "100000.00",
+        cash: "100000.00",
+        buyingPower: "400000.00", 
+        dayTradeCount: 0,
+        status: "DEMO"
+      };
+    }
+
+    return { stats, chart, positions, feed, reflection, accountBalance };
   }
 
   async pauseAsset(assetSymbol: string): Promise<void> {
