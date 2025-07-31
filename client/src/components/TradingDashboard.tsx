@@ -497,8 +497,15 @@ export default function TradingDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-orange-200">
-                This will close all open positions in your Alpaca paper trading account and reset it to the target equity.
+                <strong>Important:</strong> Alpaca's API doesn't allow setting account balance programmatically. This will only close all open positions. To actually reset your account balance, you need to:
               </p>
+              <ul className="text-xs text-orange-300 list-disc list-inside space-y-1 mb-3">
+                <li>Go to your Alpaca dashboard</li>
+                <li>Click your paper account number (top left)</li>
+                <li>Select "Open New Paper Account"</li>
+                <li>Set your desired starting balance</li>
+                <li>Update your API keys in the bot</li>
+              </ul>
               <div className="space-y-2">
                 <Label htmlFor="targetEquity" className="text-orange-200">Target Equity ($)</Label>
                 <Input
@@ -517,7 +524,7 @@ export default function TradingDashboard() {
                   disabled={alpacaResetMutation.isPending}
                   className="flex-1 bg-orange-600 hover:bg-orange-700"
                 >
-                  {alpacaResetMutation.isPending ? "Resetting..." : "Reset Account"}
+                  {alpacaResetMutation.isPending ? "Closing Positions..." : "Close All Positions"}
                 </Button>
                 <Button
                   variant="outline"
