@@ -739,15 +739,21 @@ export class TradingService {
     side?: string;
   }): Promise<any> {
     try {
-      // Get current market price
-      let currentPrice = 100000; // Default BTC price
+      // Get current market price with asset-specific defaults
+      let currentPrice = 100000; // Default for BTC
+      if (asset.symbol.includes("XRP")) {
+        currentPrice = 2.5;
+      } else if (asset.symbol.includes("SOL")) {
+        currentPrice = 170;
+      }
+      
       try {
         const realPrice = await alpacaClient.getLatestPrice(asset.symbol);
         if (realPrice) {
           currentPrice = realPrice;
         }
       } catch (error) {
-        console.log(`Using default price for ${asset.symbol}: $${currentPrice}`);
+        console.log(`Using asset-specific default price for ${asset.symbol}: $${currentPrice}`);
       }
 
       const executionPrice = tradeParams.price || currentPrice;
@@ -911,15 +917,21 @@ export class TradingService {
 
   async closePosition(position: Position, asset: TradingAsset): Promise<{ trade: Trade }> {
     try {
-      // Get current market price
-      let currentPrice = position.side === "long" ? 100000 : 2.5; // Default prices
+      // Get current market price with asset-specific defaults
+      let currentPrice = 100000; // Default for BTC
+      if (asset.symbol.includes("XRP")) {
+        currentPrice = 2.5;
+      } else if (asset.symbol.includes("SOL")) {
+        currentPrice = 170;
+      }
+      
       try {
         const realPrice = await alpacaClient.getLatestPrice(asset.symbol);
         if (realPrice) {
           currentPrice = realPrice;
         }
       } catch (error) {
-        console.log(`Using default price for ${asset.symbol}: $${currentPrice}`);
+        console.log(`Using asset-specific default price for ${asset.symbol}: $${currentPrice}`);
       }
 
       const positionQuantity = parseFloat(position.quantity || "0");
