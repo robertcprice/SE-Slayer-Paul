@@ -335,6 +335,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // P&L History routes
+  app.get("/api/assets/:assetId/pnl-history", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const history = await storage.getPnlHistory(req.params.assetId, limit);
+      
+      // Format for chart consumption
+      const chartData = {
+        dates: history.map(h => h.timestamp?.toISOString() || new Date().toISOString()),
+        totalPnl: history.map(h => parseFloat(h.totalPnl || "0")),
+        unrealizedPnl: history.map(h => parseFloat(h.unrealizedPnl || "0")),
+        realizedPnl: history.map(h => parseFloat(h.realizedPnl || "0")),
+        positionValue: history.map(h => parseFloat(h.positionValue || "0")),
+      };
+      
+      res.json(chartData);
+    } catch (error) {
+      console.error('Error fetching P&L history:', error);
+      res.status(500).json({ error: 'Failed to fetch P&L history' });
+    }
+  });
+
   // Backtesting routes
   app.get("/api/backtests", async (req, res) => {
     try {

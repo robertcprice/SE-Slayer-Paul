@@ -17,7 +17,9 @@ import {
   type InsertTradingStrategy,
   type BacktestResult,
   type InsertBacktestResult,
-  type DashboardStats
+  type DashboardStats,
+  type PnlHistory,
+  type InsertPnlHistory
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -75,6 +77,10 @@ export interface IStorage {
   // Dashboard Stats
   calculateStats(assetId: string): Promise<DashboardStats>;
   
+  // P&L History tracking
+  recordPnlSnapshot(assetId: string, currentPrice: number): Promise<void>;
+  getPnlHistory(assetId: string, limit?: number): Promise<PnlHistory[]>;
+  
   // All trading assets
   getAllTradingAssets(): Promise<TradingAsset[]>;
 }
@@ -82,7 +88,7 @@ export interface IStorage {
 // Import database connection
 import { db } from './db';
 import { eq, desc, sql, and } from 'drizzle-orm';
-import { users, tradingAssets, trades, positions, marketData, aiReflections, aiDecisionLogs, tradingStrategies, backtestResults } from '@shared/schema';
+import { users, tradingAssets, trades, positions, marketData, aiReflections, aiDecisionLogs, tradingStrategies, backtestResults, pnlHistory } from '@shared/schema';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -343,6 +349,62 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async recordPnlSnapshot(assetId: string, currentPrice: number): Promise<void> {
+    try {
+      const positions = await this.getPositionsByAsset(assetId);
+      const openPositions = positions.filter(p => p.isOpen);
+      const closedPositions = positions.filter(p => !p.isOpen);
+      
+      // Calculate unrealized P&L from open positions
+      const unrealizedPnl = openPositions.reduce((sum, pos) => {
+        const entryPrice = parseFloat(pos.avgEntryPrice || "0");
+        const quantity = parseFloat(pos.quantity || "0");
+        const pnl = pos.side === "long" 
+          ? (currentPrice - entryPrice) * quantity 
+          : (entryPrice - currentPrice) * quantity;
+        return sum + pnl;
+      }, 0);
+      
+      // Calculate realized P&L from closed positions
+      const realizedPnl = closedPositions.reduce((sum, pos) => {
+        return sum + parseFloat(pos.unrealizedPnl || "0"); // When closed, unrealizedPnl becomes realized
+      }, 0);
+      
+      // Calculate total position value
+      const positionValue = openPositions.reduce((sum, pos) => {
+        const quantity = parseFloat(pos.quantity || "0");
+        return sum + (quantity * currentPrice);
+      }, 0);
+      
+      const totalPnl = realizedPnl + unrealizedPnl;
+      
+      await db.insert(pnlHistory).values({
+        assetId,
+        totalPnl: totalPnl.toString(),
+        unrealizedPnl: unrealizedPnl.toString(),
+        realizedPnl: realizedPnl.toString(),
+        positionValue: positionValue.toString(),
+        marketPrice: currentPrice.toString(),
+      });
+      
+    } catch (error) {
+      console.error(`Error recording P&L snapshot for asset ${assetId}:`, error);
+    }
+  }
+
+  async getPnlHistory(assetId: string, limit = 100): Promise<PnlHistory[]> {
+    try {
+      return await db.select()
+        .from(pnlHistory)
+        .where(eq(pnlHistory.assetId, assetId))
+        .orderBy(desc(pnlHistory.timestamp))
+        .limit(limit);
+    } catch (error) {
+      console.error(`Error fetching P&L history for asset ${assetId}:`, error);
+      return [];
+    }
+  }
+
   async getLatestMarketData(assetId: string, limit = 100): Promise<MarketData[]> {
     try {
       return await db.select()
@@ -489,7 +551,7 @@ export class DatabaseStorage implements IStorage {
 
       return {
         totalPnl,
-        winRate: Math.round(winRate * 10000) / 100, // Convert to percentage with 2 decimal places
+        winRate: Math.round(winRate * 100 * 100) / 100, // Convert to percentage with 2 decimal places
         sharpeRatio: Math.round(sharpeRatio * 100) / 100, // Round to 2 decimal places
         totalTrades: actualTrades.length, // Total trades (including opens)
         drawdown: Math.round(drawdown * 100) / 100,

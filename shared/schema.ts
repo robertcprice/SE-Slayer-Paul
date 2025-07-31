@@ -71,6 +71,18 @@ export const aiReflections = pgTable("ai_reflections", {
   summary: jsonb("summary"),
 });
 
+// P&L history tracking for dashboard graphs
+export const pnlHistory = pgTable("pnl_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assetId: varchar("asset_id").references(() => tradingAssets.id),
+  timestamp: timestamp("timestamp").defaultNow(),
+  totalPnl: decimal("total_pnl", { precision: 18, scale: 2 }),
+  unrealizedPnl: decimal("unrealized_pnl", { precision: 18, scale: 2 }),
+  realizedPnl: decimal("realized_pnl", { precision: 18, scale: 2 }),
+  positionValue: decimal("position_value", { precision: 18, scale: 2 }),
+  marketPrice: decimal("market_price", { precision: 18, scale: 2 }),
+});
+
 export const aiDecisionLogs = pgTable("ai_decision_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assetId: varchar("asset_id").references(() => tradingAssets.id),
@@ -177,6 +189,11 @@ export const insertBacktestResultSchema = createInsertSchema(backtestResults).om
   createdAt: true,
 });
 
+export const insertPnlHistorySchema = createInsertSchema(pnlHistory).omit({
+  id: true,
+  timestamp: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -204,6 +221,9 @@ export type InsertTradingStrategy = z.infer<typeof insertTradingStrategySchema>;
 
 export type BacktestResult = typeof backtestResults.$inferSelect;
 export type InsertBacktestResult = z.infer<typeof insertBacktestResultSchema>;
+
+export type PnlHistory = typeof pnlHistory.$inferSelect;
+export type InsertPnlHistory = z.infer<typeof insertPnlHistorySchema>;
 
 // Dashboard data types
 export type DashboardStats = {

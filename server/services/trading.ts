@@ -644,6 +644,21 @@ export class TradingService {
       };
     }
 
+    // Record P&L snapshot for historical tracking (if we have current price)
+    try {
+      if (chart.close && chart.close.length > 0) {
+        const currentPrice = chart.close[chart.close.length - 1];
+        if (currentPrice && currentPrice > 0) {
+          // Record P&L snapshot in background (don't wait for completion)
+          storage.recordPnlSnapshot(asset.id, currentPrice).catch(error => 
+            console.error(`Failed to record P&L snapshot for ${assetSymbol}:`, error)
+          );
+        }
+      }
+    } catch (error) {
+      console.error(`Error recording P&L snapshot for ${assetSymbol}:`, error);
+    }
+
     return { stats, chart, positions, feed, reflection, accountBalance };
   }
 

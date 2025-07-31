@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import OverviewStats from "./OverviewStats";
 import ActivePositions from "./ActivePositions";
 import AssetPanel from "./AssetPanel";
+import PnlHistoryChart from "./PnlHistoryChart";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -350,6 +351,17 @@ export default function TradingDashboard() {
 
         {/* Active Positions */}
         <ActivePositions positions={allPositions} />
+
+        {/* P&L History Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {assets?.map((asset) => (
+            <PnlHistoryChart
+              key={`pnl-${asset.id}`}
+              assetId={asset.id}
+              assetSymbol={asset.symbol}
+            />
+          ))}
+        </div>
 
         {/* Asset Dashboards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
