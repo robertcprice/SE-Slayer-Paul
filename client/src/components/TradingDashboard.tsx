@@ -139,8 +139,12 @@ export default function TradingDashboard() {
   const [accountBalance, setAccountBalance] = useState<AccountBalance | undefined>(undefined);
 
   const updateGradient = () => {
-    document.body.style.background = `linear-gradient(-45deg, ${colorConfig.color1}, ${colorConfig.color2})`;
-    document.body.style.backgroundSize = "400% 400%";
+    const gradientDiv = document.querySelector('.gradient-background') as HTMLElement;
+    if (gradientDiv) {
+      gradientDiv.style.background = `linear-gradient(-45deg, ${colorConfig.color1}, ${colorConfig.color2}, ${colorConfig.color1}, ${colorConfig.color2})`;
+      gradientDiv.style.backgroundSize = "400% 400%";
+      gradientDiv.style.animation = "gradientShift 15s ease infinite";
+    }
   };
 
   useEffect(() => {
@@ -148,13 +152,12 @@ export default function TradingDashboard() {
   }, [colorConfig]);
 
   useEffect(() => {
-    // Apply initial gradient and animation class, but leave room for navigation
-    document.body.className = "gradient-bg min-h-screen text-white font-inter";
+    // Apply minimal body styling, main gradient will be on container
+    document.body.className = "text-white font-inter";
     updateGradient();
     
     // Cleanup function to reset when component unmounts
     return () => {
-      document.body.style.background = "";
       document.body.className = "";
     };
   }, []);
@@ -263,31 +266,44 @@ export default function TradingDashboard() {
 
   return (
     <div className="min-h-screen relative pt-14">
-      {/* Gradient Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 pointer-events-none" />
+      {/* Animated Gradient Background */}
+      <div 
+        className="gradient-background fixed inset-0 pointer-events-none"
+        style={{
+          background: `linear-gradient(-45deg, ${colorConfig.color1}, ${colorConfig.color2}, ${colorConfig.color1}, ${colorConfig.color2})`,
+          backgroundSize: "400% 400%",
+          animation: "gradientShift 15s ease infinite"
+        }}
+      />
       
       {/* Simple Theme Color Picker - Top Left */}
       <div className="fixed top-16 left-4 z-50 flex gap-2">
         <div
-          className="w-6 h-6 rounded cursor-pointer border-2 border-white/30 hover:border-white/60 transition-colors"
+          className="w-8 h-8 rounded-lg cursor-pointer border-2 border-white/30 hover:border-white/60 transition-all glass-button"
           style={{ backgroundColor: colorConfig.color1 }}
           onClick={() => {
             const input = document.createElement('input');
             input.type = 'color';
             input.value = colorConfig.color1;
-            input.onchange = (e) => setColorConfig(prev => ({ ...prev, color1: (e.target as HTMLInputElement).value }));
+            input.onchange = (e) => {
+              const newColor = (e.target as HTMLInputElement).value;
+              setColorConfig(prev => ({ ...prev, color1: newColor }));
+            };
             input.click();
           }}
           title="Primary Color"
         />
         <div
-          className="w-6 h-6 rounded cursor-pointer border-2 border-white/30 hover:border-white/60 transition-colors"
+          className="w-8 h-8 rounded-lg cursor-pointer border-2 border-white/30 hover:border-white/60 transition-all glass-button"
           style={{ backgroundColor: colorConfig.color2 }}
           onClick={() => {
             const input = document.createElement('input');
             input.type = 'color';
             input.value = colorConfig.color2;
-            input.onchange = (e) => setColorConfig(prev => ({ ...prev, color2: (e.target as HTMLInputElement).value }));
+            input.onchange = (e) => {
+              const newColor = (e.target as HTMLInputElement).value;
+              setColorConfig(prev => ({ ...prev, color2: newColor }));
+            };
             input.click();
           }}
           title="Accent Color"
@@ -300,7 +316,7 @@ export default function TradingDashboard() {
           onClick={() => setShowResetDialog(true)}
           variant="outline"
           size="sm"
-          className="bg-red-600/20 border-red-500/50 text-red-200 hover:bg-red-600/30"
+          className="glass-button bg-red-600/20 border-red-500/50 text-red-200 hover:bg-red-600/30"
         >
           Export & Reset All Data
         </Button>
@@ -308,7 +324,7 @@ export default function TradingDashboard() {
           onClick={() => setShowAlpacaResetDialog(true)}
           variant="outline"
           size="sm"
-          className="bg-orange-600/20 border-orange-500/50 text-orange-200 hover:bg-orange-600/30"
+          className="glass-button bg-orange-600/20 border-orange-500/50 text-orange-200 hover:bg-orange-600/30"
         >
           Close Positions & Reset
         </Button>
@@ -351,7 +367,7 @@ export default function TradingDashboard() {
       {/* Manual Trading Button */}
       <Button
         onClick={() => setIsManualTradeOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg z-50"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full glass-button bg-blue-500/80 hover:bg-blue-600/80 text-white shadow-lg z-50 backdrop-blur-lg"
         size="icon"
       >
         <Plus className="h-6 w-6" />
@@ -359,8 +375,8 @@ export default function TradingDashboard() {
 
       {/* Manual Trading Modal */}
       {isManualTradeOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4 glass-panel-dark border-white/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle>Manual Trade</CardTitle>
               <Button
