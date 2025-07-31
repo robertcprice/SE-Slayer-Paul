@@ -247,29 +247,46 @@ export class AlpacaClient {
 
   async closeAllPositions(): Promise<Position[]> {
     try {
+      console.log('🔍 Fetching current Alpaca positions...');
       const positions = await this.getPositions();
+      
+      if (positions.length === 0) {
+        console.log('✅ No positions to close in Alpaca account');
+        return [];
+      }
+      
       const closedPositions: Position[] = [];
       
       for (const position of positions) {
         try {
+          console.log(`🔄 Attempting to close position: ${position.symbol} (${position.qty} shares)`);
+          
           // Close position via DELETE request
-          await axios.delete(`${this.baseURL}/v2/positions/${position.symbol}`, {
-            headers: this.getHeaders()
+          const response = await axios.delete(`${this.baseURL}/v2/positions/${position.symbol}`, {
+            headers: this.getHeaders(),
+            timeout: 10000 // 10 second timeout
           });
           
           closedPositions.push(position);
-          console.log(`📤 Closed Alpaca position: ${position.symbol} (${position.qty} shares)`);
+          console.log(`✅ Successfully closed Alpaca position: ${position.symbol}`);
           
-        } catch (error) {
-          console.error(`Failed to close position ${position.symbol}:`, error);
+        } catch (positionError) {
+          console.error(`❌ Failed to close position ${position.symbol}:`, positionError.message);
+          // Continue with other positions even if one fails
         }
       }
       
-      console.log(`🔄 Closed ${closedPositions.length} positions in Alpaca account`);
+      console.log(`🎯 Alpaca account reset: Closed ${closedPositions.length}/${positions.length} positions`);
       return closedPositions;
       
     } catch (error) {
-      console.error('Failed to close all positions:', error);
+      console.error('❌ Critical error in closeAllPositions:', error.message);
+      
+      // If we can't even get positions, throw the error to be handled upstream
+      if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        throw new Error('Alpaca API connection failed - check internet connection and API keys');
+      }
+      
       throw error;
     }
   }

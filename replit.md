@@ -169,6 +169,16 @@ Preferred communication style: Simple, everyday language.
 - **Position State Management**: System tracks both long and short positions with accurate quantity and entry price averaging
 - **Automated Position Transitions**: When SELL quantity exceeds long position, automatically closes long and opens short with remainder
 
+### July 31, 2025 - Complete Reset System & UI Improvements
+- **Export & Reset All Data**: Complete system reset with JSON export of all trading data before clearing database
+- **Alpaca Account Reset**: Button to close all Alpaca paper trading positions with robust error handling
+- **Demo Mode Support**: Graceful fallback when Alpaca API is not accessible, simulates position closure
+- **Internal Position Reset**: Both Alpaca and internal database positions are closed during account reset
+- **Simple Theme Picker**: Redesigned theme controls as two small color boxes in top left corner
+- **Enhanced Error Handling**: Comprehensive error handling for API failures with informative user feedback
+- **Data Export Format**: Complete JSON export includes trades, positions, AI logs, reflections, market data, and statistics
+- **Reset Confirmation Dialogs**: Warning dialogs with detailed information about irreversible actions
+
 ### Active Trading Status  
 - **Database Persistence**: All historical logs and trades now permanently stored and accessible
 - **Trading Interval Control**: Proper 5-minute intervals enforced - no more multiple API calls within seconds
