@@ -1108,8 +1108,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: errorMessage 
-          ? `Account reset completed in demo mode (Alpaca API not connected)`
-          : `Alpaca paper account reset completed successfully`,
+          ? `Positions closed and data reset completed in demo mode. To change your account balance, create a new Alpaca paper account through their dashboard.`
+          : `All Alpaca positions closed and data reset completed. To change your account balance, go to your Alpaca dashboard, create a new paper account with your desired balance, and update your API keys.`,
         closedPositions: closedPositions.length,
         internalPositionsClosed,
         alpacaPositions: closedPositions,

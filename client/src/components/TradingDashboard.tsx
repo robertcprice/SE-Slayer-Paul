@@ -304,7 +304,7 @@ export default function TradingDashboard() {
           size="sm"
           className="bg-orange-600/20 border-orange-500/50 text-orange-200 hover:bg-orange-600/30"
         >
-          Reset Alpaca Account
+          Close Positions & Reset
         </Button>
       </div>
 
@@ -493,38 +493,29 @@ export default function TradingDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <Card className="w-full max-w-md mx-4 bg-orange-950/90 border-orange-500/50">
             <CardHeader>
-              <CardTitle className="text-orange-200">🔄 Reset Alpaca Paper Account</CardTitle>
+              <CardTitle className="text-orange-200">🔄 Close Positions & Reset Data</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-orange-200">
-                <strong>Important:</strong> Alpaca's API doesn't allow setting account balance programmatically. This will only close all open positions. To actually reset your account balance, you need to:
+                This will close all Alpaca positions and reset all trading data in the bot. 
               </p>
-              <ul className="text-xs text-orange-300 list-disc list-inside space-y-1 mb-3">
-                <li>Go to your Alpaca dashboard</li>
-                <li>Click your paper account number (top left)</li>
-                <li>Select "Open New Paper Account"</li>
-                <li>Set your desired starting balance</li>
-                <li>Update your API keys in the bot</li>
-              </ul>
-              <div className="space-y-2">
-                <Label htmlFor="targetEquity" className="text-orange-200">Target Equity ($)</Label>
-                <Input
-                  id="targetEquity"
-                  type="number"
-                  step="1000"
-                  placeholder="100000"
-                  value={targetEquity}
-                  onChange={(e) => setTargetEquity(e.target.value)}
-                  className="border-orange-500/50"
-                />
+              <div className="bg-orange-900/30 p-3 rounded-lg mb-4">
+                <p className="text-xs text-orange-300 font-semibold mb-2">To change your account balance:</p>
+                <ul className="text-xs text-orange-300 list-disc list-inside space-y-1">
+                  <li>Go to your Alpaca dashboard</li>
+                  <li>Click your paper account number (top left)</li>
+                  <li>Select "Open New Paper Account"</li>
+                  <li>Set your desired starting balance</li>
+                  <li>Update your API keys in the bot</li>
+                </ul>
               </div>
               <div className="flex space-x-2">
                 <Button
-                  onClick={() => alpacaResetMutation.mutate(targetEquity)}
+                  onClick={() => alpacaResetMutation.mutate("100000")}
                   disabled={alpacaResetMutation.isPending}
                   className="flex-1 bg-orange-600 hover:bg-orange-700"
                 >
-                  {alpacaResetMutation.isPending ? "Closing Positions..." : "Close All Positions"}
+                  {alpacaResetMutation.isPending ? "Resetting..." : "Close Positions & Reset Data"}
                 </Button>
                 <Button
                   variant="outline"

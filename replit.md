@@ -188,6 +188,14 @@ Preferred communication style: Simple, everyday language.
 - **Database Consistency**: Enhanced position updates with proper quantity averaging and P&L tracking
 - **Trade Feed Integration**: Manual trades properly appear in trade feed with correct P&L display
 
+### July 31, 2025 - Simplified Reset System with Clear Alpaca Limitations
+- **Clarified Reset Functionality**: Updated reset system to clearly explain Alpaca API limitations regarding account balance changes
+- **Single Reset Button**: Simplified to one "Close Positions & Reset Data" button that closes Alpaca positions and clears bot data
+- **Clear User Instructions**: Prominent instructions for users to manually create new Alpaca paper account for balance changes
+- **Accurate Messaging**: Backend and frontend messages now clearly state what the reset actually does vs what requires manual action
+- **Removed Target Equity Input**: Eliminated confusing target equity field since API cannot set account balance programmatically
+- **User Education**: Added helpful step-by-step instructions for Alpaca dashboard account management
+
 ### Active Trading Status  
 - **Database Persistence**: All historical logs and trades now permanently stored and accessible
 - **Trading Interval Control**: Proper 5-minute intervals enforced - no more multiple API calls within seconds
@@ -198,3 +206,4 @@ Preferred communication style: Simple, everyday language.
 - **Real Portfolio**: Live connection to Alpaca paper trading account with simulated execution fallback
 - **Strategy Management**: ICT Smart Money Concepts strategy configured as default with conservative personality
 - **Backtesting Ready**: System can analyze historical performance using actual trading data from database
+- **Reset Clarity**: Users now understand exactly what reset functions do and what requires manual Alpaca dashboard actions
