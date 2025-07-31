@@ -58,8 +58,14 @@ function ApiKeyManagementPanel() {
   const { toast } = useToast();
   const [testResults, setTestResults] = useState<ApiTestResults | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [editingKeys, setEditingKeys] = useState(false);
+  const [keyValues, setKeyValues] = useState({
+    alpacaApiKey: '',
+    alpacaSecretKey: '',
+    openaiApiKey: ''
+  });
 
-  const { data: apiKeys } = useQuery<ApiKeyStatus>({
+  const { data: apiKeys, refetch } = useQuery<ApiKeyStatus>({
     queryKey: ["/api/admin/api-keys"],
     queryFn: () => apiRequest("/api/admin/api-keys")
   });
@@ -81,6 +87,30 @@ function ApiKeyManagementPanel() {
       });
     } finally {
       setIsTesting(false);
+    }
+  };
+
+  const updateApiKeys = async () => {
+    try {
+      await apiRequest("/api/admin/api-keys", { 
+        method: "PUT",
+        body: JSON.stringify(keyValues)
+      });
+      
+      toast({
+        title: "API Keys Updated",
+        description: "API keys have been updated successfully"
+      });
+      
+      setEditingKeys(false);
+      refetch();
+      
+    } catch (error) {
+      toast({
+        title: "Update Failed", 
+        description: "Failed to update API keys",
+        variant: "destructive"
+      });
     }
   };
 
