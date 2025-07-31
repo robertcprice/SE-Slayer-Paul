@@ -551,7 +551,7 @@ export class DatabaseStorage implements IStorage {
 
       return {
         totalPnl,
-        winRate: Math.round(winRate * 100 * 100) / 100, // Convert to percentage with 2 decimal places
+        winRate: Math.round(winRate * 100) / 100, // FIXED: Remove one multiplication by 100
         sharpeRatio: Math.round(sharpeRatio * 100) / 100, // Round to 2 decimal places
         totalTrades: actualTrades.length, // Total trades (including opens)
         drawdown: Math.round(drawdown * 100) / 100,
