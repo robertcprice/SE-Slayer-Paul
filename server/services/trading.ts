@@ -612,13 +612,26 @@ export class TradingService {
       }
     }
 
-    // Get recent actual trades for feed (exclude HOLD decisions) - properly filtered by asset
-    const allTrades = await storage.getTradesByAsset(asset.id, 50);
+    // Get ALL trades for the feed (exclude HOLD decisions) - show completed trades first
+    const allTrades = await storage.getTradesByAsset(asset.id, 100); // Get more trades for scrollable feed
     const actualTrades = allTrades.filter(trade => 
       trade.action !== 'HOLD' && trade.assetId === asset.id // Double-check asset filtering
     );
     
-    const feed: TradeFeed[] = actualTrades.slice(0, 10).map(trade => {
+    // Sort trades: completed trades (with P&L) first, then recent trades
+    const sortedTrades = actualTrades.sort((a, b) => {
+      const aPnl = Math.abs(parseFloat(a.pnl || "0"));
+      const bPnl = Math.abs(parseFloat(b.pnl || "0"));
+      
+      // Completed trades (with P&L) first
+      if (aPnl > 0.01 && bPnl <= 0.01) return -1;
+      if (bPnl > 0.01 && aPnl <= 0.01) return 1;
+      
+      // Within same category, sort by timestamp (newest first)
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+    
+    const feed: TradeFeed[] = sortedTrades.map(trade => {
       // Check if trade is manual by looking at execution result or reasoning
       const isManual = trade.aiReasoning?.includes('MANUAL TRADE') || 
                       (trade.executionResult && typeof trade.executionResult === 'object' && 

@@ -348,6 +348,20 @@ export class AlpacaClient {
     }
   }
 
+  async getPosition(symbol: string): Promise<any> {
+    try {
+      const response = await axios.get(`${this.baseURL}/v2/positions/${symbol}`, {
+        headers: this.getHeaders(),
+        timeout: 10000 // 10 second timeout
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to get Alpaca position ${symbol}:`, error);
+      throw error;
+    }
+  }
+
   async closePosition(symbol: string): Promise<any> {
     try {
       const response = await axios.delete(`${this.baseURL}/v2/positions/${symbol}`, {

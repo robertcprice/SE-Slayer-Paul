@@ -187,10 +187,16 @@ export default function TradingDashboard() {
             latestAccountBalance = data.accountBalance;
           }
           
-          // Calculate real P&L from positions
-          const assetPnl = data.positions
+          // Calculate total P&L: realized from closed positions + unrealized from open positions
+          const realizedPnl = data.positions
+            .filter((pos: any) => !pos.isOpen)
+            .reduce((sum: number, pos: any) => sum + parseFloat(pos.unrealizedPnl || "0"), 0);
+          
+          const unrealizedPnl = data.positions
             .filter((pos: any) => pos.isOpen)
             .reduce((sum: number, pos: any) => sum + parseFloat(pos.unrealizedPnl || "0"), 0);
+          
+          const assetPnl = realizedPnl + unrealizedPnl;
           
           totalPnl += assetPnl;
           allPositions.push(...data.positions);

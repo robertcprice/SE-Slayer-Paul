@@ -351,29 +351,49 @@ export default function AssetPanel({
         </div>
       </div>
 
-      {/* Recent Trades */}
+      {/* Completed Trades Feed */}
       <div className="bg-gray-900/50 rounded-2xl p-4 mb-4">
         <h3 className="text-lg font-bold uppercase tracking-wide text-cyan-300 mb-3">
-          Recent Trades
+          Completed Trades
         </h3>
-        <ul className="space-y-2 text-sm">
-          {feed.length === 0 ? (
-            <li className="text-gray-400">No trades yet.</li>
+        <div className="max-h-48 overflow-y-auto space-y-2 text-sm scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+          {feed.filter(trade => Math.abs(trade.pnl || 0) > 0.01).length === 0 ? (
+            <div className="text-gray-400 py-4 text-center">No completed trades yet.</div>
           ) : (
-            feed.slice(0, 3).map((trade, index) => (
-              <li key={index} className="flex justify-between items-center">
-                <span className="text-gray-300">
-                  [{new Date(trade.timestamp).toLocaleTimeString()}] {trade.action} {parseFloat(trade.quantity).toFixed(3)} @ ${parseFloat(trade.price).toFixed(2)}
-                </span>
-                <span className={`font-semibold ${
-                  (trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {(trade.pnl || 0) >= 0 ? '+' : ''}${(trade.pnl || 0).toFixed(2)}
-                </span>
-              </li>
-            ))
+            feed
+              .filter(trade => Math.abs(trade.pnl || 0) > 0.01) // Only show trades with meaningful P&L
+              .map((trade, index) => (
+                <div key={index} className="flex justify-between items-center bg-gray-800/30 rounded-lg p-3 border-l-4"
+                     style={{
+                       borderLeftColor: (trade.pnl || 0) >= 0 ? '#10b981' : '#ef4444'
+                     }}>
+                  <div>
+                    <div className="text-gray-300 font-medium">
+                      <span className={`inline-block w-8 text-center font-bold ${
+                        trade.action === 'BUY' ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {trade.action}
+                      </span>
+                      {parseFloat(trade.quantity).toFixed(3)} @ ${parseFloat(trade.price).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {new Date(trade.timestamp).toLocaleDateString()} {new Date(trade.timestamp).toLocaleTimeString()}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`font-bold text-sm ${
+                      (trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {(trade.pnl || 0) >= 0 ? '+' : ''}${(trade.pnl || 0).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      P&L
+                    </div>
+                  </div>
+                </div>
+              ))
           )}
-        </ul>
+        </div>
       </div>
 
       {/* AI Insights */}

@@ -1033,8 +1033,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : alpacaSymbol + "/USD";
         
         try {
+          // Get the asset for P&L calculation
+          const assets = await storage.getTradingAssets();
+          const asset = assets.find(a => a.symbol === assetSymbol);
+          
+          if (!asset) {
+            return res.status(404).json({ error: "Asset not found for Alpaca position" });
+          }
+
+          // Get Alpaca position details before closing for P&L calculation
+          let positionData = null;
+          try {
+            positionData = await alpacaClient.getPosition(alpacaSymbol);
+          } catch (error) {
+            console.log(`Could not fetch Alpaca position details for ${alpacaSymbol}`);
+          }
+
           // Close the Alpaca position directly
           await alpacaClient.closePosition(alpacaSymbol);
+          
+          // If we got position data, calculate and log P&L
+          if (positionData) {
+            const unrealizedPnl = parseFloat(positionData.unrealized_pl || "0");
+            const quantity = Math.abs(parseFloat(positionData.qty || "0"));
+            const avgEntryPrice = parseFloat(positionData.avg_entry_price || "0");
+            const marketValue = parseFloat(positionData.market_value || "0");
+            const side = parseFloat(positionData.qty || "0") > 0 ? "long" : "short";
+            const currentPrice = quantity > 0 ? Math.abs(marketValue / quantity) : avgEntryPrice;
+            
+            // Create a closing trade record
+            const closingAction = side === "long" ? "SELL" : "BUY";
+            await storage.createTrade({
+              assetId: asset.id,
+              action: closingAction,
+              quantity: quantity.toString(),
+              price: currentPrice.toFixed(2),
+              positionSizing: "0",
+              stopLoss: null,
+              takeProfit: null,
+              aiReasoning: `ALPACA CLOSE - User closed ${side} position via Alpaca interface`,
+              aiDecision: { manual: true, action: closingAction, close: true, alpaca: true },
+              executionResult: {
+                status: "FILLED",
+                orderId: `alpaca_close_${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                executedPrice: currentPrice,
+                executedQuantity: quantity,
+                manual: true,
+                alpaca: true
+              },
+              pnl: unrealizedPnl.toFixed(2),
+            });
+
+            console.log(`🔴 Closed Alpaca ${side} position for ${assetSymbol}: P&L $${unrealizedPnl.toFixed(2)}`);
+          }
           
           res.json({ 
             success: true, 
