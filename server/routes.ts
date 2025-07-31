@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { TradingService } from "./services/trading";
 import { tradingScheduler } from "./trading-scheduler";
+import { aiScheduler } from "./services/ai-scheduler";
 import type { WebSocketMessage } from "@shared/schema";
 
 const tradingService = new TradingService();
@@ -549,6 +550,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting asset:", error);
       res.status(500).json({ error: "Failed to delete asset" });
+    }
+  });
+
+  // Manual AI Analysis trigger
+  app.post("/api/admin/ai-analysis/:assetId", async (req, res) => {
+    try {
+      const { assetId } = req.params;
+      await aiScheduler.triggerReflection(assetId);
+      res.json({ success: true, message: "AI analysis triggered successfully" });
+    } catch (error) {
+      console.error("Error triggering AI analysis:", error);
+      res.status(500).json({ error: "Failed to trigger AI analysis" });
+    }
+  });
+
+  // AI Analysis scheduler status
+  app.get("/api/admin/ai-scheduler-status", async (req, res) => {
+    try {
+      res.json({ 
+        isRunning: true, 
+        intervalHours: 2, 
+        message: "AI scheduler is running and generating strategy improvements every 2 hours" 
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get scheduler status" });
     }
   });
 

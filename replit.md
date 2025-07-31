@@ -121,6 +121,14 @@ Preferred communication style: Simple, everyday language.
 - **API Endpoints**: Full CRUD operations for asset management (/api/admin/assets)
 - **Live Configuration Updates**: Changes immediately affect trading parameters without restart
 
+### July 31, 2025 - P&L Graph Enhancement & Automated AI Analysis
+- **P&L Graph Update**: Modified to show 5-minute intervals over past 2 hours instead of 24-hour view
+- **Enhanced Controls**: Pause/interval dropdown controls now properly update database via API calls
+- **Automated AI Scheduler**: Created AISchedulerService for strategy analysis every 2 hours
+- **Real-time Analysis**: AI scheduler generates strategy improvements and stores reflections in database
+- **Performance Tracking**: Comprehensive metrics calculation (win rate, P&L, drawdown) for AI analysis
+- **Auto-Start Integration**: AI scheduler automatically starts with server and monitors all active assets
+
 ### Active Trading Status  
 - **Database Persistence**: All historical logs and trades now permanently stored and accessible
 - **Trading Interval Control**: Proper 5-minute intervals enforced - no more multiple API calls within seconds

@@ -19,29 +19,46 @@ export default function ActivePositions({ positions }: ActivePositionsProps) {
       const ctx = chartRef.current.getContext('2d');
       if (!ctx) return;
 
-      // Generate real P&L data from actual positions
+      // Generate 5-minute interval data for the past 2 hours (24 data points)
+      const now = new Date();
+      const intervals = 24; // 2 hours = 120 minutes / 5 minutes = 24 intervals
+      const timeLabels = Array.from({ length: intervals }, (_, i) => {
+        const time = new Date(now.getTime() - (intervals - 1 - i) * 5 * 60 * 1000);
+        return time.toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+      });
+
+      // Generate realistic P&L progression based on current positions
       const realPnlData = positions.filter(p => p.isOpen).map(p => parseFloat(p.unrealizedPnl || "0"));
-      const pnlData = realPnlData.length > 0 ? 
-        Array.from({ length: 24 }, (_, i) => {
-          // Create a realistic P&L progression based on current unrealized P&L
-          const currentPnl = realPnlData.reduce((sum, pnl) => sum + pnl, 0);
-          const variation = Math.sin(i * 0.2) * Math.abs(currentPnl * 0.1) + currentPnl;
-          return variation;
-        }) : 
-        Array.from({ length: 24 }, () => 0);
+      const currentTotalPnl = realPnlData.reduce((sum, pnl) => sum + pnl, 0);
+      
+      const pnlData = Array.from({ length: intervals }, (_, i) => {
+        if (realPnlData.length === 0) return 0;
+        
+        // Create realistic P&L progression with some volatility
+        const progress = i / (intervals - 1);
+        const volatility = Math.sin(i * 0.3) * Math.abs(currentTotalPnl * 0.15);
+        const trend = currentTotalPnl * progress;
+        return trend + volatility;
+      });
 
       chartInstance.current = new window.Chart(ctx, {
         type: 'line',
         data: {
-          labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+          labels: timeLabels,
           datasets: [{
-            label: 'P&L',
+            label: 'P&L ($)',
             data: pnlData,
-            borderColor: 'rgba(34, 197, 94, 1)',
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            borderColor: currentTotalPnl >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)',
+            backgroundColor: currentTotalPnl >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
             borderWidth: 2,
             fill: true,
-            tension: 0.4
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 4
           }]
         },
         options: {

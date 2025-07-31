@@ -157,18 +157,48 @@ export default function AssetPanel({
     }
   };
 
-  const togglePause = () => {
-    sendMessage(JSON.stringify({ 
-      action: isPaused ? "resume" : "pause" 
-    }));
+  const togglePause = async () => {
+    try {
+      const newPausedState = !isPaused;
+      setIsPaused(newPausedState);
+      
+      // Update asset in database
+      const response = await fetch(`/api/admin/assets/${asset.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPaused: newPausedState }),
+      });
+      
+      if (!response.ok) {
+        // Revert on error
+        setIsPaused(!newPausedState);
+        console.error('Failed to update pause state');
+      }
+    } catch (error) {
+      console.error('Error toggling pause:', error);
+    }
   };
 
-  const handleIntervalChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newInterval = parseInt(event.target.value);
-    sendMessage(JSON.stringify({ 
-      action: "set_interval", 
-      interval: newInterval 
-    }));
+  const handleIntervalChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    try {
+      const newInterval = parseInt(event.target.value);
+      setCurrentInterval(newInterval);
+      
+      // Update asset in database
+      const response = await fetch(`/api/admin/assets/${asset.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interval: newInterval }),
+      });
+      
+      if (!response.ok) {
+        // Revert on error
+        setCurrentInterval(asset.interval);
+        console.error('Failed to update interval');
+      }
+    } catch (error) {
+      console.error('Error updating interval:', error);
+    }
   };
 
   const getIntervalDisplay = (interval: number) => {
