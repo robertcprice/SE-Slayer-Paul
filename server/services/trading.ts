@@ -188,7 +188,7 @@ export class TradingService {
     const realPnl = executionResult.status === "FILLED" ? 
       (executionResult.executedPrice - currentPrice) * executionResult.executedQuantity : 0;
 
-    // Create trade record
+    // Create trade record (AI decision already logged in OpenAI service)
     const trade = await storage.createTrade({
       assetId: asset.id,
       action: aiDecision.recommendation,

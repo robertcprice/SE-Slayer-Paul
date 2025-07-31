@@ -56,6 +56,9 @@ export interface IStorage {
   
   // Dashboard Stats
   calculateStats(assetId: string): Promise<DashboardStats>;
+  
+  // All trading assets
+  getAllTradingAssets(): Promise<TradingAsset[]>;
 }
 
 // Import database connection
@@ -124,6 +127,15 @@ export class DatabaseStorage implements IStorage {
 
   async getTradingAssets(): Promise<TradingAsset[]> {
     return await db.select().from(tradingAssets);
+  }
+
+  async getAllTradingAssets(): Promise<TradingAsset[]> {
+    try {
+      return await db.select().from(tradingAssets);
+    } catch (error) {
+      console.error(`Error fetching all trading assets:`, error);
+      return [];
+    }
   }
 
   async getTradingAsset(id: string): Promise<TradingAsset | undefined> {
