@@ -59,29 +59,8 @@ export class TradingService {
       const positions = await storage.getPositionsByAsset(asset.id);
       const openPositions = positions.filter(p => p.isOpen);
 
-      // Get AI decision with comprehensive logging
-      const startTime = Date.now();
+      // Get AI decision (logging handled inside analyzeMarketWithOpenAI)
       const aiDecision = await analyzeMarketWithOpenAI(summary, asset.symbol, openPositions, asset.id);
-      const responseTime = Date.now() - startTime;
-      
-      // Log AI decision to database and file (only once)
-      await storage.createAiDecisionLog({
-        assetId: asset.id,
-        symbol: asset.symbol,
-        recommendation: aiDecision.recommendation,
-        reasoning: aiDecision.reasoning,
-        positionSizing: aiDecision.position_sizing?.toString() || null,
-        stopLoss: aiDecision.stop_loss?.toString() || null,
-        takeProfit: aiDecision.take_profit?.toString() || null,
-        nextCycleSeconds: asset.interval,
-        marketData: summary,
-        rawResponse: aiDecision,
-        responseTimeMs: responseTime,
-        modelUsed: "gpt-4o",
-        promptTokens: null, // Will be populated from OpenAI response
-        completionTokens: null,
-        totalTokens: null,
-      });
       console.log(`AI decision for ${asset.symbol}:`, aiDecision);
 
       // Execute trade based on AI decision (only log actual trades, not HOLD decisions)
@@ -208,22 +187,49 @@ export class TradingService {
     const openPosition = existingPositions.find(p => p.isOpen);
 
     if (openPosition) {
-      // Update existing position
-      await storage.updatePosition(openPosition.id, {
-        quantity: (parseFloat(openPosition.quantity || "0") + quantity).toString(),
-        unrealizedPnl: realPnl.toString(),
-      });
+      if (aiDecision.recommendation === "BUY") {
+        // Increase long position
+        const currentQuantity = parseFloat(openPosition.quantity || "0");
+        const currentAvgPrice = parseFloat(openPosition.avgEntryPrice || "0");
+        const newQuantity = currentQuantity + quantity;
+        const avgPrice = ((currentAvgPrice * currentQuantity) + (currentPrice * quantity)) / newQuantity;
+        await storage.updatePosition(openPosition.id, {
+          quantity: newQuantity.toString(),
+          avgEntryPrice: avgPrice.toString(),
+          unrealizedPnl: ((currentPrice - avgPrice) * newQuantity).toString(),
+        });
+      } else if (aiDecision.recommendation === "SELL") {
+        // Reduce or close long position
+        const currentQuantity = parseFloat(openPosition.quantity || "0");
+        if (quantity >= currentQuantity) {
+          // Close entire position
+          await storage.updatePosition(openPosition.id, {
+            isOpen: false,
+            unrealizedPnl: "0",
+          });
+        } else {
+          // Partial close
+          const newQuantity = currentQuantity - quantity;
+          const avgEntryPrice = parseFloat(openPosition.avgEntryPrice || "0");
+          await storage.updatePosition(openPosition.id, {
+            quantity: newQuantity.toString(),
+            unrealizedPnl: ((currentPrice - avgEntryPrice) * newQuantity).toString(),
+          });
+        }
+      }
     } else {
-      // Create new position
-      await storage.createPosition({
-        assetId: asset.id,
-        symbol: asset.symbol,
-        side: aiDecision.recommendation === "BUY" ? "long" : "short",
-        quantity: quantity.toString(),
-        avgEntryPrice: currentPrice.toString(),
-        unrealizedPnl: "0",
-        isOpen: true,
-      });
+      // Create new position only for BUY orders
+      if (aiDecision.recommendation === "BUY") {
+        await storage.createPosition({
+          assetId: asset.id,
+          symbol: asset.symbol,
+          side: "long",
+          quantity: quantity.toString(),
+          avgEntryPrice: currentPrice.toString(),
+          unrealizedPnl: "0",
+          isOpen: true,
+        });
+      }
     }
 
     return trade;

@@ -25,6 +25,92 @@ interface BacktestResult {
   strategy: string;
 }
 
+interface MarketSentiment {
+  btcSentiment: string;
+  solSentiment: string;
+  overallSentiment: string;
+  fearGreedIndex: number;
+  recentDecisions: {
+    bullish: number;
+    bearish: number;
+    neutral: number;
+    total: number;
+  };
+}
+
+function MarketSentimentPanel() {
+  const { data: sentiment } = useQuery<MarketSentiment>({
+    queryKey: ["/api/admin/market-sentiment"],
+    refetchInterval: 10000,
+  });
+
+  const getSentimentColor = (sentiment: string) => {
+    if (sentiment.includes("Bullish") || sentiment.includes("Optimistic")) return "bg-green-500/20 text-green-400";
+    if (sentiment.includes("Bearish") || sentiment.includes("Pessimistic")) return "bg-red-500/20 text-red-400";
+    return "bg-yellow-500/20 text-yellow-400";
+  };
+
+  const getFearGreedLabel = (index: number) => {
+    if (index >= 75) return "Extreme Greed";
+    if (index >= 55) return "Greed";
+    if (index >= 45) return "Neutral";
+    if (index >= 25) return "Fear";
+    return "Extreme Fear";
+  };
+
+  return (
+    <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+      <CardHeader>
+        <CardTitle className="text-xl text-slate-100">Real-time Market Sentiment</CardTitle>
+        <p className="text-slate-400">AI-powered sentiment analysis from recent trading decisions</p>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Bitcoin Sentiment</span>
+              <Badge className={getSentimentColor(sentiment?.btcSentiment || "Neutral")}>
+                {sentiment?.btcSentiment || "Loading..."}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Solana Sentiment</span>
+              <Badge className={getSentimentColor(sentiment?.solSentiment || "Neutral")}>
+                {sentiment?.solSentiment || "Loading..."}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Overall Market</span>
+              <Badge className={getSentimentColor(sentiment?.overallSentiment || "Neutral")}>
+                {sentiment?.overallSentiment || "Loading..."}
+              </Badge>
+            </div>
+            {sentiment?.recentDecisions && (
+              <div className="mt-4 p-3 bg-slate-700/30 rounded-lg">
+                <div className="text-sm text-slate-400 mb-2">Recent AI Decisions ({sentiment.recentDecisions.total})</div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-green-400">Buy: {sentiment.recentDecisions.bullish}</span>
+                  <span className="text-red-400">Sell: {sentiment.recentDecisions.bearish}</span>
+                  <span className="text-yellow-400">Hold: {sentiment.recentDecisions.neutral}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="bg-slate-700/50 p-4 rounded-lg">
+            <div className="text-sm text-slate-400 mb-2">AI Fear & Greed Index</div>
+            <div className="text-3xl font-bold text-orange-400">
+              {sentiment?.fearGreedIndex || "..."}
+            </div>
+            <div className="text-sm text-slate-400">
+              {sentiment ? getFearGreedLabel(sentiment.fearGreedIndex) : "Loading..."}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminPanel() {
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   const [backtestLoading, setBacktestLoading] = useState(false);
@@ -214,35 +300,7 @@ export default function AdminPanel() {
 
           {/* Market Sentiment Tab */}
           <TabsContent value="sentiment" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl text-slate-100">Real-time Market Sentiment</CardTitle>
-                <p className="text-slate-400">AI-powered sentiment analysis from multiple data sources</p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300">Bitcoin Sentiment</span>
-                      <Badge className="bg-green-500/20 text-green-400">Bullish</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300">Solana Sentiment</span>
-                      <Badge className="bg-yellow-500/20 text-yellow-400">Neutral</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300">Overall Market</span>
-                      <Badge className="bg-green-500/20 text-green-400">Optimistic</Badge>
-                    </div>
-                  </div>
-                  <div className="bg-slate-700/50 p-4 rounded-lg">
-                    <div className="text-sm text-slate-400 mb-2">Fear & Greed Index</div>
-                    <div className="text-3xl font-bold text-orange-400">64</div>
-                    <div className="text-sm text-slate-400">Greed</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <MarketSentimentPanel />
           </TabsContent>
 
           {/* Settings Tab */}

@@ -335,22 +335,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { asset, period, strategy } = req.body;
       
-      // Mock backtest results for now - replace with real implementation
+      // Get real historical performance data for backtesting
+      const targetAsset = await storage.getTradingAssetBySymbol(asset);
+      if (!targetAsset) {
+        return res.status(404).json({ error: "Asset not found" });
+      }
+
+      // Calculate period in days
+      const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      
+      // Get actual trading data for the period
+      const trades = await storage.getTradesByAsset(targetAsset.id, 1000);
+      const recentTrades = trades.filter(t => new Date(t.timestamp || Date.now()) >= startDate);
+      const actualTrades = recentTrades.filter(t => t.action === "BUY" || t.action === "SELL");
+      
+      if (actualTrades.length === 0) {
+        return res.json({
+          startDate: startDate.toISOString(),
+          endDate: new Date().toISOString(),
+          totalReturn: 0,
+          sharpeRatio: 0,
+          maxDrawdown: 0,
+          winRate: 0,
+          totalTrades: 0,
+          strategy: strategy || "AI ICT/SMC",
+          message: "No trading data available for the selected period"
+        });
+      }
+
+      // Calculate real performance metrics
+      let totalPnl = 0;
+      let wins = 0;
+      let losses = 0;
+      let maxDrawdownValue = 0;
+      let currentDrawdown = 0;
+      let runningTotal = 0;
+
+      for (const trade of actualTrades) {
+        const pnl = parseFloat(trade.pnl || "0");
+        totalPnl += pnl;
+        runningTotal += pnl;
+        
+        if (pnl > 0) wins++;
+        else if (pnl < 0) losses++;
+        
+        // Track drawdown
+        if (runningTotal < 0) {
+          currentDrawdown = Math.abs(runningTotal);
+          maxDrawdownValue = Math.max(maxDrawdownValue, currentDrawdown);
+        } else {
+          currentDrawdown = 0;
+        }
+      }
+
+      const winRate = actualTrades.length > 0 ? (wins / actualTrades.length) * 100 : 0;
+      const totalReturnPercent = totalPnl / 10000 * 100; // Assuming $10k initial capital
+      
+      // Calculate Sharpe ratio (simplified - using average return / volatility)
+      const avgReturn = totalPnl / actualTrades.length;
+      const returns = actualTrades.map(t => parseFloat(t.pnl || "0"));
+      const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+      const sharpeRatio = variance > 0 ? avgReturn / Math.sqrt(variance) : 0;
+
       const result = {
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        startDate: startDate.toISOString(),
         endDate: new Date().toISOString(),
-        totalReturn: 24.5,
-        sharpeRatio: 1.85,
-        maxDrawdown: -8.2,
-        winRate: 68.5,
-        totalTrades: 247,
-        strategy: strategy || "AI ICT/SMC",
+        totalReturn: parseFloat(totalReturnPercent.toFixed(2)),
+        sharpeRatio: parseFloat(sharpeRatio.toFixed(2)),
+        maxDrawdown: parseFloat((-maxDrawdownValue).toFixed(2)),
+        winRate: parseFloat(winRate.toFixed(1)),
+        totalTrades: actualTrades.length,
+        strategy: strategy || "AI ICT/SMC"
       };
       
       res.json(result);
     } catch (error) {
       console.error("Error running backtest:", error);
       res.status(500).json({ error: "Failed to run backtest" });
+    }
+  });
+
+  // Real-time market sentiment endpoint
+  app.get("/api/admin/market-sentiment", async (req, res) => {
+    try {
+      // Get recent AI decisions to analyze sentiment
+      const recentLogs = await storage.getAiDecisionLogs(undefined, 20);
+      
+      // Calculate sentiment based on recent AI recommendations
+      const recommendations = recentLogs.map(log => log.recommendation);
+      const bullishCount = recommendations.filter(r => r === "BUY").length;
+      const bearishCount = recommendations.filter(r => r === "SELL").length;
+      const neutralCount = recommendations.filter(r => r === "HOLD").length;
+      
+      const totalDecisions = recommendations.length;
+      const bullishPercent = totalDecisions > 0 ? (bullishCount / totalDecisions) * 100 : 0;
+      const bearishPercent = totalDecisions > 0 ? (bearishCount / totalDecisions) * 100 : 0;
+      
+      // Determine overall sentiment
+      let btcSentiment = "Neutral";
+      let solSentiment = "Neutral";
+      let overallSentiment = "Neutral";
+      
+      if (bullishPercent > 60) {
+        btcSentiment = "Bullish";
+        solSentiment = "Bullish";
+        overallSentiment = "Optimistic";
+      } else if (bearishPercent > 60) {
+        btcSentiment = "Bearish";
+        solSentiment = "Bearish";
+        overallSentiment = "Pessimistic";
+      } else if (bullishPercent > bearishPercent) {
+        overallSentiment = "Cautiously Optimistic";
+      }
+      
+      // Mock Fear & Greed Index based on sentiment
+      const fearGreedIndex = Math.max(0, Math.min(100, 50 + (bullishPercent - bearishPercent)));
+      
+      res.json({
+        btcSentiment,
+        solSentiment,
+        overallSentiment,
+        fearGreedIndex: Math.round(fearGreedIndex),
+        recentDecisions: {
+          bullish: bullishCount,
+          bearish: bearishCount,
+          neutral: neutralCount,
+          total: totalDecisions
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching market sentiment:", error);
+      res.status(500).json({ error: "Failed to fetch market sentiment" });
     }
   });
 
