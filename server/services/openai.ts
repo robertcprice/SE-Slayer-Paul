@@ -35,7 +35,9 @@ export async function analyzeMarketWithOpenAI(
   summary: MarketSummary, 
   asset: string, 
   positions: Position[] = [],
-  assetId?: string
+  assetId?: string,
+  strategy?: any,
+  secondarySummary?: MarketSummary
 ): Promise<AIDecision> {
   // Format positions for the prompt
   let positionsStr = "No open positions.";
@@ -46,8 +48,8 @@ export async function analyzeMarketWithOpenAI(
     });
   }
 
-  const prompt = `
-You are an advanced AI trading assistant specializing in ICT (Inner Circle Trader), Smart Money Concepts (SMC), and institutional order flow strategies.
+  // Use strategy configuration if provided
+  const systemPrompt = strategy?.systemPrompt || `You are an advanced AI trading assistant specializing in ICT (Inner Circle Trader), Smart Money Concepts (SMC), and institutional order flow strategies.
 When analyzing a trading opportunity, consider the following concepts:
 - Market structure (BOS, CHoCH)
 - Liquidity grabs and inducements
@@ -57,22 +59,67 @@ When analyzing a trading opportunity, consider the following concepts:
 - Imbalance
 - Session timing (e.g. London/NY killzones)
 - Relative equal highs/lows (liquidity pools)
-- Classic indicators (RSI, moving averages) only as confluence, not as a primary driver
+- Classic indicators (RSI, moving averages) only as confluence, not as a primary driver`;
+
+  const personalityPrompt = strategy?.personalityPrompt || "";
+  const primaryTimeframe = strategy?.primaryTimeframe || "1h";
+  const secondaryTimeframe = strategy?.secondaryTimeframe;
+  const includedIndicators = strategy?.includedIndicators || ['rsi', 'macd', 'sma20', 'sma50', 'bb_upper', 'bb_lower'];
+
+  // Build technical data string based on included indicators
+  let technicalData = `Primary Timeframe (${primaryTimeframe}) Data:\n`;
+  technicalData += `- Recent closes: ${summary.close.slice(-10).join(', ')}\n`;
+  
+  if (includedIndicators.includes('rsi')) {
+    technicalData += `- RSI(14): ${summary.rsi.slice(-5).join(', ')}\n`;
+  }
+  if (includedIndicators.includes('macd')) {
+    technicalData += `- MACD: ${summary.macd.slice(-5).join(', ')}\n`;
+  }
+  if (includedIndicators.includes('sma20')) {
+    technicalData += `- SMA20: ${summary.sma20.slice(-5).join(', ')}\n`;
+  }
+  if (includedIndicators.includes('sma50')) {
+    technicalData += `- SMA50: ${summary.sma50.slice(-5).join(', ')}\n`;
+  }
+  if (includedIndicators.includes('bb_upper')) {
+    technicalData += `- Bollinger Upper: ${summary.bb_upper.slice(-5).join(', ')}\n`;
+  }
+  if (includedIndicators.includes('bb_lower')) {
+    technicalData += `- Bollinger Lower: ${summary.bb_lower.slice(-5).join(', ')}\n`;
+  }
+
+  // Add secondary timeframe data if available
+  if (secondarySummary && secondaryTimeframe) {
+    technicalData += `\nSecondary Timeframe (${secondaryTimeframe}) Data:\n`;
+    technicalData += `- Recent closes: ${secondarySummary.close.slice(-10).join(', ')}\n`;
+    
+    if (includedIndicators.includes('rsi')) {
+      technicalData += `- RSI(14): ${secondarySummary.rsi.slice(-5).join(', ')}\n`;
+    }
+    if (includedIndicators.includes('macd')) {
+      technicalData += `- MACD: ${secondarySummary.macd.slice(-5).join(', ')}\n`;
+    }
+    if (includedIndicators.includes('sma20')) {
+      technicalData += `- SMA20: ${secondarySummary.sma20.slice(-5).join(', ')}\n`;
+    }
+    if (includedIndicators.includes('sma50')) {
+      technicalData += `- SMA50: ${secondarySummary.sma50.slice(-5).join(', ')}\n`;
+    }
+  }
+
+  const prompt = `${systemPrompt}
+
+${personalityPrompt ? `Trading Personality: ${personalityPrompt}\n` : ''}
 
 Here is the current position status:
 ${positionsStr}
 
-Given the following technical summary for ${asset}, make a recommendation using ICT and SMC principles.
-Clearly explain which concepts informed your analysis.
+Given the following technical summary for ${asset}, make a recommendation.
+Clearly explain your analysis and reasoning.
 
 Technical Data:
-- Recent closes: ${summary.close.slice(-10).join(', ')}
-- RSI(14): ${summary.rsi.slice(-5).join(', ')}
-- MACD: ${summary.macd.slice(-5).join(', ')}
-- SMA20: ${summary.sma20.slice(-5).join(', ')}
-- SMA50: ${summary.sma50.slice(-5).join(', ')}
-- Bollinger Upper: ${summary.bb_upper.slice(-5).join(', ')}
-- Bollinger Lower: ${summary.bb_lower.slice(-5).join(', ')}
+${technicalData}
 
 Output a valid JSON object with these fields:
 - recommendation: "BUY", "SELL", or "HOLD"

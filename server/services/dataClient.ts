@@ -34,18 +34,31 @@ export class DataClient {
     this.mockPrices.set("SOL/USD", 95);
   }
 
-  async getHistoricalData(asset: string, days = 30, timeframe = '1h'): Promise<HistoricalData[]> {
+  async getHistoricalData(asset: string, days = 30, timeframe = '1h', dataPoints = 100): Promise<HistoricalData[]> {
     // In a real implementation, this would fetch from Alpaca or another data provider
     // For now, generate realistic mock data with proper technical indicators
     
     const basePrice = this.mockPrices.get(asset) || 100;
     const data: HistoricalData[] = [];
-    const hoursBack = days * 24;
+    
+    // Calculate time intervals based on timeframe
+    let intervalMinutes = 60; // Default to 1h
+    switch (timeframe) {
+      case '1m': intervalMinutes = 1; break;
+      case '5m': intervalMinutes = 5; break;
+      case '15m': intervalMinutes = 15; break;
+      case '1h': intervalMinutes = 60; break;
+      default: intervalMinutes = 60;
+    }
+    
+    // Calculate how many intervals to generate
+    const totalMinutes = Math.min(days * 24 * 60, dataPoints * intervalMinutes);
+    const intervals = Math.floor(totalMinutes / intervalMinutes);
     
     let currentPrice = basePrice;
     
-    for (let i = hoursBack; i >= 0; i--) {
-      const timestamp = new Date(Date.now() - i * 3600000);
+    for (let i = intervals; i >= 0; i--) {
+      const timestamp = new Date(Date.now() - i * intervalMinutes * 60000);
       
       // Generate realistic price movement
       const volatility = asset === "BTC/USD" ? 0.02 : 0.03;

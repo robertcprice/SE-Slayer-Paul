@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, Save, X } from "lucide-react";
+import { Trash2, Edit, Plus, Save, X, Database, Clock } from "lucide-react";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { TradingStrategy, InsertTradingStrategy } from "@shared/schema";
 
 export default function StrategyEditor() {
@@ -22,7 +24,12 @@ export default function StrategyEditor() {
     name: "",
     systemPrompt: "",
     personalityPrompt: "",
-    isDefault: false
+    isDefault: false,
+    primaryTimeframe: "1h",
+    secondaryTimeframe: "",
+    dataPoints: 100,
+    includedIndicators: ["rsi", "macd", "sma20", "sma50", "bb_upper", "bb_lower"],
+    customDataFields: []
   });
 
   // Fetch all strategies
@@ -102,7 +109,12 @@ export default function StrategyEditor() {
       name: "",
       systemPrompt: "",
       personalityPrompt: "",
-      isDefault: false
+      isDefault: false,
+      primaryTimeframe: "1h",
+      secondaryTimeframe: "",
+      dataPoints: 100,
+      includedIndicators: ["rsi", "macd", "sma20", "sma50", "bb_upper", "bb_lower"],
+      customDataFields: []
     });
   };
 
@@ -112,7 +124,12 @@ export default function StrategyEditor() {
       name: strategy.name,
       systemPrompt: strategy.systemPrompt,
       personalityPrompt: strategy.personalityPrompt || "",
-      isDefault: strategy.isDefault || false
+      isDefault: strategy.isDefault || false,
+      primaryTimeframe: strategy.primaryTimeframe || "1h",
+      secondaryTimeframe: strategy.secondaryTimeframe || "",
+      dataPoints: strategy.dataPoints || 100,
+      includedIndicators: strategy.includedIndicators || ["rsi", "macd", "sma20", "sma50", "bb_upper", "bb_lower"],
+      customDataFields: strategy.customDataFields || []
     });
     setIsEditing(false);
   };
@@ -193,7 +210,12 @@ Respond with a JSON object containing:
               name: "",
               systemPrompt: "",
               personalityPrompt: "",
-              isDefault: false
+              isDefault: false,
+              primaryTimeframe: "1h",
+              secondaryTimeframe: "",
+              dataPoints: 100,
+              includedIndicators: ["rsi", "macd", "sma20", "sma50", "bb_upper", "bb_lower"],
+              customDataFields: []
             });
           }}
         >
@@ -330,6 +352,114 @@ Respond with JSON containing:
                     className="min-h-[100px]"
                     disabled={selectedStrategy && !isEditing}
                   />
+                </div>
+
+                {/* Data Configuration Section */}
+                <div className="border-t pt-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    <h3 className="text-lg font-semibold">Data Configuration</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="primaryTimeframe">Primary Timeframe</Label>
+                      <Select
+                        value={formData.primaryTimeframe}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, primaryTimeframe: value }))}
+                        disabled={selectedStrategy && !isEditing}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1m">1 Minute</SelectItem>
+                          <SelectItem value="5m">5 Minutes</SelectItem>
+                          <SelectItem value="15m">15 Minutes</SelectItem>
+                          <SelectItem value="1h">1 Hour</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="secondaryTimeframe">Secondary Timeframe (optional)</Label>
+                      <Select
+                        value={formData.secondaryTimeframe || "none"}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, secondaryTimeframe: value === "none" ? "" : value }))}
+                        disabled={selectedStrategy && !isEditing}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="1m">1 Minute</SelectItem>
+                          <SelectItem value="5m">5 Minutes</SelectItem>
+                          <SelectItem value="15m">15 Minutes</SelectItem>
+                          <SelectItem value="1h">1 Hour</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="dataPoints">Number of Data Points</Label>
+                    <Input
+                      id="dataPoints"
+                      type="number"
+                      min="10"
+                      max="1000"
+                      value={formData.dataPoints}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dataPoints: parseInt(e.target.value) || 100 }))}
+                      placeholder="100"
+                      disabled={selectedStrategy && !isEditing}
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Number of historical candles to include in analysis (10-1000)
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label>Technical Indicators to Include</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                      {[
+                        { id: "rsi", label: "RSI (14)" },
+                        { id: "macd", label: "MACD" },
+                        { id: "sma20", label: "SMA 20" },
+                        { id: "sma50", label: "SMA 50" },
+                        { id: "bb_upper", label: "Bollinger Upper" },
+                        { id: "bb_lower", label: "Bollinger Lower" },
+                        { id: "ema20", label: "EMA 20" },
+                        { id: "ema50", label: "EMA 50" }
+                      ].map((indicator) => (
+                        <div key={indicator.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={indicator.id}
+                            checked={formData.includedIndicators.includes(indicator.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  includedIndicators: [...prev.includedIndicators, indicator.id]
+                                }));
+                              } else {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  includedIndicators: prev.includedIndicators.filter(id => id !== indicator.id)
+                                }));
+                              }
+                            }}
+                            disabled={selectedStrategy && !isEditing}
+                            className="mr-2"
+                          />
+                          <Label htmlFor={indicator.id} className="text-sm">
+                            {indicator.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-center space-x-2">

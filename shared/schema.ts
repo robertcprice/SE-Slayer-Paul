@@ -98,6 +98,12 @@ export const tradingStrategies = pgTable("trading_strategies", {
   systemPrompt: text("system_prompt").notNull(),
   personalityPrompt: text("personality_prompt"),
   isDefault: boolean("is_default").default(false),
+  // Data configuration for OpenAI analysis
+  primaryTimeframe: text("primary_timeframe").default("1h"), // 1m, 5m, 15m, 1h
+  secondaryTimeframe: text("secondary_timeframe"), // Optional second timeframe
+  dataPoints: integer("data_points").default(100), // Number of candles to include
+  includedIndicators: text("included_indicators").array().default(sql`ARRAY['rsi', 'macd', 'sma20', 'sma50', 'bb_upper', 'bb_lower']::text[]`),
+  customDataFields: text("custom_data_fields").array().default(sql`ARRAY[]::text[]`), // For future extensibility
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

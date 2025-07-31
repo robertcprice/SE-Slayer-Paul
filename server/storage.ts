@@ -487,7 +487,24 @@ export class DatabaseStorage implements IStorage {
 
   async createTradingStrategy(strategy: InsertTradingStrategy): Promise<TradingStrategy> {
     try {
-      const [newStrategy] = await db.insert(tradingStrategies).values(strategy).returning();
+      // If this is being set as default, unset all other defaults first
+      if (strategy.isDefault) {
+        await db
+          .update(tradingStrategies)
+          .set({ isDefault: false })
+          .where(eq(tradingStrategies.isDefault, true));
+      }
+
+      // Set default values for new data configuration fields if not provided
+      const strategyWithDefaults = {
+        ...strategy,
+        primaryTimeframe: strategy.primaryTimeframe || "1h",
+        dataPoints: strategy.dataPoints || 100,
+        includedIndicators: strategy.includedIndicators || ["rsi", "macd", "sma20", "sma50", "bb_upper", "bb_lower"],
+        customDataFields: strategy.customDataFields || []
+      };
+
+      const [newStrategy] = await db.insert(tradingStrategies).values(strategyWithDefaults).returning();
       return newStrategy;
     } catch (error) {
       console.error("Error creating trading strategy:", error);
@@ -497,6 +514,14 @@ export class DatabaseStorage implements IStorage {
 
   async updateTradingStrategy(id: string, updates: Partial<TradingStrategy>): Promise<TradingStrategy | undefined> {
     try {
+      // If this is being set as default, unset all other defaults first
+      if (updates.isDefault) {
+        await db
+          .update(tradingStrategies)
+          .set({ isDefault: false })
+          .where(eq(tradingStrategies.isDefault, true));
+      }
+
       const [updated] = await db.update(tradingStrategies)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(tradingStrategies.id, id))

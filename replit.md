@@ -140,6 +140,16 @@ Preferred communication style: Simple, everyday language.
 - **Real Trading Data**: Backtesting uses actual trade history from database for accurate performance analysis
 - **Multi-Asset Support**: Strategy editor and backtesting work with all configured trading assets
 
+### July 31, 2025 - Configurable OpenAI Data Sources
+- **Multi-Timeframe Support**: Added support for 1m, 5m, 15m, and 1h data analysis with dual timeframe capability
+- **Data Configuration UI**: New strategy editor section for configuring OpenAI input data
+- **Customizable Indicators**: Checkbox interface for selecting which technical indicators to send to OpenAI
+- **Variable Data Points**: Configurable number of historical candles (10-1000) for analysis
+- **Database Schema Extension**: Extended trading_strategies table with data configuration fields
+- **Enhanced Data Client**: Updated to generate data for different timeframes with proper interval calculations
+- **OpenAI Service Enhancement**: Modified to use strategy-specific data configuration instead of fixed inputs
+- **Selective Technical Analysis**: AI now receives only the indicators specified in the strategy configuration
+
 ### Active Trading Status  
 - **Database Persistence**: All historical logs and trades now permanently stored and accessible
 - **Trading Interval Control**: Proper 5-minute intervals enforced - no more multiple API calls within seconds

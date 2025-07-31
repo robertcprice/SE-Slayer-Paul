@@ -59,8 +59,11 @@ export class TradingService {
       const positions = await storage.getPositionsByAsset(asset.id);
       const openPositions = positions.filter(p => p.isOpen);
 
-      // Get AI decision (logging handled inside analyzeMarketWithOpenAI)
-      const aiDecision = await analyzeMarketWithOpenAI(summary, asset.symbol, openPositions, asset.id);
+      // Get the trading strategy configuration
+      const strategy = await storage.getDefaultTradingStrategy();
+      
+      // Get AI decision with strategy configuration (logging handled inside analyzeMarketWithOpenAI)
+      const aiDecision = await analyzeMarketWithOpenAI(summary, asset.symbol, openPositions, asset.id, strategy);
       console.log(`AI decision for ${asset.symbol}:`, aiDecision);
 
       // Execute trade based on AI decision (only log actual trades, not HOLD decisions)
