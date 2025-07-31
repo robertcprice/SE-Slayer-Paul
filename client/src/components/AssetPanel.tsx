@@ -23,6 +23,7 @@ export default function AssetPanel({
     averageLoss: 0,
   });
   const [feed, setFeed] = useState<TradeFeed[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
   const [reflection, setReflection] = useState("");
   const [improvements, setImprovements] = useState("");
   const [isPaused, setIsPaused] = useState(asset.isPaused);
@@ -59,7 +60,7 @@ export default function AssetPanel({
         }
         
         if (data.positions) {
-          // Store positions locally for this asset panel
+          setPositions(data.positions);
         }
         
         if (data.feed) {
@@ -270,6 +271,43 @@ export default function AssetPanel({
               style={{ width: `${stats.winRate * 100}%` }}
             ></div>
           </div>
+        </div>
+      </div>
+
+      {/* Current Positions */}
+      <div className="bg-gray-900/50 rounded-2xl p-4 mb-4">
+        <h3 className="text-lg font-bold uppercase tracking-wide text-cyan-300 mb-3">
+          Current Positions
+        </h3>
+        <div className="space-y-2 text-sm">
+          {positions.length === 0 ? (
+            <div className="text-gray-400">No open positions.</div>
+          ) : (
+            positions.filter(pos => pos.isOpen).map((position, index) => (
+              <div key={index} className="flex justify-between items-center bg-gray-800/50 rounded-lg p-3">
+                <div>
+                  <div className="text-gray-300">
+                    <span className={`font-semibold ${position.side === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                      {position.side.toUpperCase()}
+                    </span> {parseFloat(position.quantity).toFixed(4)} {position.symbol}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Entry: ${parseFloat(position.avgEntryPrice).toFixed(2)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`font-semibold ${
+                    parseFloat(position.unrealizedPnl) >= 0 ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {parseFloat(position.unrealizedPnl) >= 0 ? '+' : ''}${parseFloat(position.unrealizedPnl).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {new Date(position.openedAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
