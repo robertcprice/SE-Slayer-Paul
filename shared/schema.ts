@@ -15,6 +15,9 @@ export const tradingAssets = pgTable("trading_assets", {
   isActive: boolean("is_active").default(true),
   interval: integer("interval").default(300), // seconds
   isPaused: boolean("is_paused").default(false),
+  maxPositionSize: decimal("max_position_size", { precision: 5, scale: 2 }).default("5.0"), // percentage of portfolio
+  stopLossPercent: decimal("stop_loss_percent", { precision: 5, scale: 2 }).default("2.0"), // percentage
+  takeProfitPercent: decimal("take_profit_percent", { precision: 5, scale: 2 }).default("4.0"), // percentage
   createdAt: timestamp("created_at").defaultNow(),
 });
 

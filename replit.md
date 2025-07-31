@@ -113,6 +113,14 @@ Preferred communication style: Simple, everyday language.
 - **Real-time Position Updates**: Live BTC position showing 0.113226311 BTC with -$1.34 unrealized P&L
 - **AI Log Export**: JSON/CSV export functionality working with persistent database storage
 
+### July 31, 2025 - Admin Panel Configuration Controls
+- **Asset Management Panel**: Complete UI for adding, editing, and removing trading assets
+- **Trading Parameter Controls**: Real-time editing of max position size, stop loss, and take profit percentages
+- **Database Schema Extension**: Added risk management fields to trading_assets table
+- **Asset-Specific Settings**: Individual configuration per asset with persistent storage
+- **API Endpoints**: Full CRUD operations for asset management (/api/admin/assets)
+- **Live Configuration Updates**: Changes immediately affect trading parameters without restart
+
 ### Active Trading Status  
 - **Database Persistence**: All historical logs and trades now permanently stored and accessible
 - **Trading Interval Control**: Proper 5-minute intervals enforced - no more multiple API calls within seconds

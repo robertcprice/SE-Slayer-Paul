@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, TrendingUp, Settings, BarChart3, Play, Pause } from "lucide-react";
+import { AssetManagementPanel } from "@/components/AssetManagementPanel";
 
 interface SystemStats {
   totalPnl: number;
@@ -305,50 +306,7 @@ export default function AdminPanel() {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl text-slate-100">System Configuration</CardTitle>
-                <p className="text-slate-400">Manage trading parameters and system settings</p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-200">Trading Controls</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300">BTC/USD Trading</span>
-                      <Button size="sm" variant="outline" className="border-green-500 text-green-400 hover:bg-green-500/20">
-                        <Play className="w-4 h-4 mr-2" />
-                        Active
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300">SOL/USD Trading</span>
-                      <Button size="sm" variant="outline" className="border-green-500 text-green-400 hover:bg-green-500/20">
-                        <Play className="w-4 h-4 mr-2" />
-                        Active
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-200">Risk Parameters</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Max Position Size</span>
-                        <span className="text-slate-200">25%</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Stop Loss</span>
-                        <span className="text-slate-200">2.5%</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Take Profit</span>
-                        <span className="text-slate-200">7.0%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <AssetManagementPanel />
           </TabsContent>
         </Tabs>
       </div>

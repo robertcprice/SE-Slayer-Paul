@@ -29,6 +29,7 @@ export interface IStorage {
   getTradingAssetBySymbol(symbol: string): Promise<TradingAsset | undefined>;
   createTradingAsset(asset: InsertTradingAsset): Promise<TradingAsset>;
   updateTradingAsset(id: string, updates: Partial<TradingAsset>): Promise<TradingAsset | undefined>;
+  deleteTradingAsset(id: string): Promise<boolean>;
   
   // Trades
   getTradesByAsset(assetId: string, limit?: number): Promise<Trade[]>;
@@ -164,6 +165,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tradingAssets.id, id))
       .returning();
     return updatedAsset || undefined;
+  }
+
+  async deleteTradingAsset(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(tradingAssets).where(eq(tradingAssets.id, id));
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error(`Error deleting trading asset ${id}:`, error);
+      return false;
+    }
   }
 
   async getTradesByAsset(assetId: string, limit?: number): Promise<Trade[]> {

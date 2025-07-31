@@ -470,5 +470,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin asset management endpoints
+  app.get("/api/admin/assets", async (req, res) => {
+    try {
+      const assets = await storage.getAllTradingAssets();
+      res.json(assets);
+    } catch (error) {
+      console.error("Error fetching assets:", error);
+      res.status(500).json({ error: "Failed to fetch assets" });
+    }
+  });
+
+  app.post("/api/admin/assets", async (req, res) => {
+    try {
+      const { symbol, interval, maxPositionSize, stopLossPercent, takeProfitPercent } = req.body;
+      
+      // Validate required fields
+      if (!symbol) {
+        return res.status(400).json({ error: "Symbol is required" });
+      }
+
+      const asset = await storage.createTradingAsset({
+        symbol: symbol.toUpperCase(),
+        isActive: true,
+        interval: interval || 300,
+        isPaused: false,
+        maxPositionSize: maxPositionSize?.toString() || "5.0",
+        stopLossPercent: stopLossPercent?.toString() || "2.0",
+        takeProfitPercent: takeProfitPercent?.toString() || "4.0",
+      });
+
+      res.json(asset);
+    } catch (error) {
+      console.error("Error creating asset:", error);
+      if (error instanceof Error && error.message.includes("unique")) {
+        res.status(409).json({ error: "Asset already exists" });
+      } else {
+        res.status(500).json({ error: "Failed to create asset" });
+      }
+    }
+  });
+
+  app.put("/api/admin/assets/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive, interval, maxPositionSize, stopLossPercent, takeProfitPercent, isPaused } = req.body;
+
+      const updated = await storage.updateTradingAsset(id, {
+        isActive,
+        interval,
+        isPaused,
+        maxPositionSize: maxPositionSize?.toString(),
+        stopLossPercent: stopLossPercent?.toString(),
+        takeProfitPercent: takeProfitPercent?.toString(),
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "Asset not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating asset:", error);
+      res.status(500).json({ error: "Failed to update asset" });
+    }
+  });
+
+  app.delete("/api/admin/assets/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteTradingAsset(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Asset not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting asset:", error);
+      res.status(500).json({ error: "Failed to delete asset" });
+    }
+  });
+
   return httpServer;
 }
