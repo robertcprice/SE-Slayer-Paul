@@ -2,24 +2,18 @@
 
 ## How to Run
 
-### Prerequisites
-- Node.js 20+ installed
-- PostgreSQL database (automatically provided in Replit)
-- Required API keys (see Environment Variables section below)
-
-### Quick Start
+### Option 1: Running on Replit (Easiest)
 
 1. **Install Dependencies**
    ```bash
    npm install
    ```
 
-2. **Set Up Environment Variables**
-   You'll need these API keys (add them via Replit Secrets):
-   - `ALPACA_API_KEY` - Your Alpaca trading API key
-   - `ALPACA_SECRET_KEY` - Your Alpaca trading secret key
+2. **Set Up Environment Variables (Replit Secrets)**
+   - `ALPACA_API_KEY` - Your Alpaca paper trading API key
+   - `ALPACA_SECRET_KEY` - Your Alpaca paper trading secret key
    - `OPENAI_API_KEY` - Your OpenAI API key for AI analysis
-   - `DATABASE_URL` - PostgreSQL connection string (auto-provided in Replit)
+   - `DATABASE_URL` - Automatically provided by Replit PostgreSQL
 
 3. **Initialize Database**
    ```bash
@@ -31,22 +25,113 @@
    npm run dev
    ```
 
-5. **Access the Dashboard**
-   - Open your browser to the provided URL (usually shown in the console)
-   - The application runs on port 5000 by default
+### Option 2: Running Locally on Your Computer
+
+#### Prerequisites
+- Node.js 20+ installed
+- PostgreSQL database running locally
+- Git (for cloning/uploading to GitHub)
+
+#### Setup Steps
+
+1. **Clone/Download the Project**
+   ```bash
+   git clone <your-repo-url>
+   cd ai-trading-bot
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set Up Local PostgreSQL Database**
+   ```bash
+   # Install PostgreSQL (if not already installed)
+   # On macOS: brew install postgresql
+   # On Ubuntu: sudo apt install postgresql postgresql-contrib
+   # On Windows: Download from postgresql.org
+   
+   # Create database
+   createdb trading_bot
+   ```
+
+4. **Configure Environment Variables**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env file with your actual values:
+   # DATABASE_URL=postgresql://your_username:your_password@localhost:5432/trading_bot
+   # ALPACA_API_KEY=your_alpaca_paper_trading_key
+   # ALPACA_SECRET_KEY=your_alpaca_paper_trading_secret
+   # OPENAI_API_KEY=your_openai_api_key
+   ```
+
+5. **Initialize Database Schema**
+   ```bash
+   npm run db:push
+   ```
+
+6. **Start the Application**
+   ```bash
+   npm run dev
+   ```
+
+7. **Access the Dashboard**
+   - Open http://localhost:5000 in your browser
+   - The trading dashboard will load with real-time data
+
+### GitHub Upload Instructions
+
+**IMPORTANT: Upload to GitHub BEFORE installing npm dependencies locally**
+
+```bash
+# 1. First, upload your code to GitHub (before npm install)
+git add .
+git commit -m "Initial AI trading bot setup"
+git push origin main
+
+# 2. Then run npm install locally
+npm install
+
+# 3. The node_modules folder is already in .gitignore, so it won't be uploaded
+```
+
+**Why upload first?**
+- The `node_modules` folder is huge (100MB+) and shouldn't go to GitHub
+- The `.gitignore` file already excludes it
+- Your `.env` file with real API keys will also be ignored for security
+
+### API Keys Required
+
+1. **Alpaca Markets** (Free paper trading account)
+   - Sign up at: https://alpaca.markets
+   - Get paper trading API keys (NOT live trading)
+   - Use paper trading for safety while testing
+
+2. **OpenAI API** 
+   - Sign up at: https://platform.openai.com
+   - Create API key in your dashboard
+   - You'll need credits for GPT-4o usage
+
+3. **PostgreSQL** (Local database)
+   - Install PostgreSQL locally
+   - Create a database named `trading_bot`
+   - Update connection details in `.env`
 
 ### Development Commands
 - `npm run dev` - Start development server with hot reload
-- `npm run db:push` - Push database schema changes
+- `npm run db:push` - Push database schema changes to PostgreSQL
 - `npm run build` - Build for production
 
 ### Features Available After Setup
-- Real-time AI trading with OpenAI analysis
-- Live dashboard with trading statistics
-- Manual trading interface
-- Backtesting functionality
-- Strategy editor and management
-- Admin console with complete system logs
+- Real-time AI trading with OpenAI GPT-4o analysis
+- Live dashboard with trading statistics and charts
+- Manual trading interface for direct trade execution
+- Comprehensive backtesting functionality
+- Strategy editor for customizing AI personalities
+- Admin console with complete system logs and monitoring
 
 ## Overview
 
