@@ -275,6 +275,42 @@ export class TradingService {
       const currentPrice = historicalData[historicalData.length - 1].close;
       const quantity = 0.01; // Fixed small quantity for testing
 
+      // Execute real trade through Alpaca if possible
+      let realTradeExecuted = false;
+      let executionResult: any = {
+        status: "SIMULATED",
+        orderId: `ai_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        executedPrice: currentPrice,
+        executedQuantity: quantity,
+      };
+
+      try {
+        let alpacaOrder;
+        const alpacaSymbol = asset.symbol.replace('/', '');
+        
+        if (aiDecision.recommendation === "BUY") {
+          alpacaOrder = await alpacaClient.placeBuyOrder(alpacaSymbol, quantity.toFixed(8));
+        } else if (aiDecision.recommendation === "SELL") {
+          alpacaOrder = await alpacaClient.placeSellOrder(alpacaSymbol, quantity.toFixed(8));
+        }
+
+        if (alpacaOrder && alpacaOrder.status !== "rejected") {
+          executionResult = {
+            status: alpacaOrder.status || "FILLED",
+            orderId: alpacaOrder.id,
+            timestamp: new Date().toISOString(),
+            executedPrice: parseFloat(alpacaOrder.filled_avg_price || currentPrice.toString()),
+            executedQuantity: parseFloat(alpacaOrder.filled_qty || quantity.toString()),
+            realTrade: true
+          };
+          realTradeExecuted = true;
+          console.log(`🚀 Real Alpaca ${aiDecision.recommendation} executed: ${alpacaOrder.id}`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Alpaca execution failed, using simulation for ${asset.symbol}:`, error);
+      }
+
       // Create trade record
       const trade = await storage.createTrade({
         assetId: asset.id,
@@ -286,15 +322,9 @@ export class TradingService {
         takeProfit: null,
         aiReasoning: aiDecision.reasoning,
         aiDecision: aiDecision,
-        executionResult: {
-          status: "FILLED",
-          orderId: `ai_${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          executedPrice: currentPrice,
-          executedQuantity: quantity,
-        },
+        executionResult,
         pnl: "0",
-        status: "open", // New trades start as open
+        status: realTradeExecuted ? "open" : "closed", // Real trades stay open, simulated trades are immediately closed
       });
 
       console.log(`✅ AI ${aiDecision.recommendation} executed for ${asset.symbol}: ${quantity} @ $${currentPrice}`);

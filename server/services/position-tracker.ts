@@ -37,15 +37,12 @@ export class PositionTracker {
       const lastKnownPosition = this.lastKnownPositions.get(positionKey);
       
       if (lastKnownPosition && !currentPosition) {
-        // Position was closed! Capture the realized P&L and close any open trades
+        // Position was closed! Close any open trades with the realized P&L
         const realizedPnL = lastKnownPosition.lastPnL;
         
         console.log(`🔄 Position closed for ${symbol}: Capturing realized P&L of $${realizedPnL.toFixed(2)}`);
         
-        // Add this to persistent realized P&L
-        await storage.addRealizedPnl(assetId, realizedPnL);
-        
-        // Close any open trades for this asset
+        // Close any open trades for this asset - this will automatically sync P&L
         await this.closeOpenTradesForAsset(assetId, realizedPnL);
         
         // Remove from tracking

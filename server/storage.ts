@@ -284,6 +284,13 @@ export class DatabaseStorage implements IStorage {
         `${trade.action} ${trade.quantity || '0'} ${trade.assetId} @ ${trade.price || '0'} - ${trade.aiReasoning || 'No reasoning'}`
       );
       
+      // Initialize persistent P&L tracking for this asset if not exists
+      const persistentPnl = await this.getPersistentPnl(trade.assetId);
+      if (!persistentPnl) {
+        await this.initializePersistentPnl(trade.assetId);
+        console.log(`💾 Initialized persistent P&L tracking for asset ${trade.assetId}`);
+      }
+      
       return newTrade;
     } catch (error) {
       console.error(`Error creating trade:`, error);
@@ -307,11 +314,15 @@ export class DatabaseStorage implements IStorage {
         .where(eq(trades.id, tradeId))
         .returning();
       
-      if (updatedTrade && status === 'closed') {
-        console.log(`✅ Trade ${tradeId} closed with P&L: $${pnl || 0}`);
+      if (updatedTrade && status === 'closed' && pnl !== undefined) {
+        console.log(`✅ Trade ${tradeId} closed with P&L: $${pnl}`);
         await this.logToFile(this.tradeLogFile, 
-          `CLOSED: Trade ${tradeId} - P&L: $${pnl || 0}`
+          `CLOSED: Trade ${tradeId} - P&L: $${pnl}`
         );
+        
+        // CRITICAL: Automatically sync persistent P&L when trade is completed
+        await this.addRealizedPnl(updatedTrade.assetId, pnl);
+        console.log(`🔄 Auto-synced persistent P&L for asset ${updatedTrade.assetId}: +$${pnl.toFixed(2)}`);
       }
       
       return updatedTrade || undefined;
@@ -344,6 +355,20 @@ export class DatabaseStorage implements IStorage {
         .orderBy(desc(trades.closedAt));
     } catch (error) {
       console.error(`Error fetching closed trades for asset ${assetId}:`, error);
+      return [];
+    }
+  }
+
+  async getCompletedTrades(assetId: string): Promise<Trade[]> {
+    try {
+      return await db.select().from(trades)
+        .where(and(
+          eq(trades.assetId, assetId),
+          eq(trades.status, 'closed')
+        ))
+        .orderBy(desc(trades.closedAt));
+    } catch (error) {
+      console.error(`Error fetching completed trades for asset ${assetId}:`, error);
       return [];
     }
   }
@@ -1002,6 +1027,19 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error adding realized P&L for asset ${assetId}:`, error);
       throw error;
+    }
+  }
+
+  // Initialize persistent P&L entry for new assets
+  async initializePersistentPnl(assetId: string): Promise<void> {
+    try {
+      const existing = await this.getPersistentPnl(assetId);
+      if (!existing) {
+        await this.updatePersistentPnl(assetId, 0, 0);
+        console.log(`💾 Initialized persistent P&L tracking for asset ${assetId}`);
+      }
+    } catch (error) {
+      console.error(`Error initializing persistent P&L for asset ${assetId}:`, error);
     }
   }
 }
