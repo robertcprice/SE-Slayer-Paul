@@ -2,263 +2,328 @@
 
 ## Overview
 
-A sophisticated AI-powered cryptocurrency trading bot that integrates OpenAI's GPT-4o with Alpaca Markets for live trading. The system employs ICT (Inner Circle Trader) and SMC (Smart Money Concepts) strategies for intelligent market analysis and decision-making. Features real-time dashboard monitoring, comprehensive AI decision logging, and automated trading execution.
+A sophisticated AI-powered cryptocurrency trading bot that integrates OpenAI's GPT-4o with Alpaca Markets for live trading. The system employs ICT (Inner Circle Trader) and SMC (Smart Money Concepts) strategies for intelligent market analysis and decision-making. Features real-time dashboard monitoring, comprehensive AI decision logging, automated trading execution, backtesting, strategy management, and an admin console with real-time system monitoring.
 
-## Architecture
+## System Architecture & Logic Flow
 
-### Frontend (React + TypeScript)
+### Core Trading Logic
+
+```
+1. Asset Configuration → 2. Trading Cycle → 3. Market Analysis → 4. AI Decision → 5. Trade Execution → 6. Position Tracking
+```
+
+**1. Asset Configuration:**
+- Each trading asset (BTC/USD, SOL/USD, XRP/USD) has configurable parameters
+- Trading intervals (1min to 1hour), position sizing, stop-loss/take-profit percentages
+- Pause/resume controls for individual assets
+
+**2. Trading Cycle (Every configured interval):**
+- Fetches 30 periods of historical market data from Alpaca/external sources
+- Calculates technical indicators (RSI, MACD, Bollinger Bands, SMAs)
+- Retrieves current account balance and existing positions
+
+**3. Market Analysis:**
+- Aggregates market data into structured summary for AI analysis
+- Includes price action, volume, technical indicators, and current positions
+- Applies ICT/SMC concepts (market structure, liquidity zones, fair value gaps)
+
+**4. AI Decision Making:**
+- Sends market summary to OpenAI GPT-4o with trading strategy prompts
+- AI analyzes using ICT/SMC principles and generates buy/sell/hold decisions
+- Includes position sizing recommendations and risk management parameters
+
+**5. Trade Execution:**
+- Validates AI decisions against account balance and risk limits
+- Places orders through Alpaca API with proper error handling
+- Records all trade details and execution results
+
+**6. Position Tracking:**
+- Real-time P&L calculation from Alpaca positions
+- Persistent P&L accumulation across all trades
+- Performance metrics (win rate, Sharpe ratio, drawdown) calculation
+
+### Strategy Management Logic
+
+**Default Strategy System:**
+- Multiple trading strategies can be created with custom AI prompts
+- One strategy is marked as "default" - this becomes the active trading strategy
+- All assets use the default strategy for AI decision-making
+- Strategy changes take effect immediately on next trading cycles
+
+**AI Reflection System:**
+- Every 2 hours, AI analyzes recent trading performance
+- Generates insights and strategy improvement recommendations
+- Creates reflections stored in database for performance tracking
+
+## File Structure & Important Files
+
+### Frontend Architecture (`client/`)
+
 ```
 client/src/
-├── components/           # React components
-│   ├── TradingDashboard.tsx    # Main dashboard container
-│   ├── AssetPanel.tsx          # Individual asset trading panels
-│   ├── AiLogsPanel.tsx         # AI decision logging interface
-│   ├── Navigation.tsx          # App navigation bar
-│   └── ui/                     # Shadcn/ui components
-├── pages/                # Route pages
-│   ├── dashboard.tsx           # Trading dashboard page
-│   └── ai-logs.tsx            # AI logs viewing page
-├── hooks/                # Custom React hooks
-│   ├── useWebSocket.ts         # WebSocket connection management
-│   └── use-toast.ts           # Toast notifications
-└── lib/                  # Utilities
-    ├── queryClient.ts          # TanStack Query configuration
-    └── utils.ts               # Utility functions
+├── components/                 # React Components
+│   ├── TradingDashboard.tsx   # Main dashboard container with asset grid
+│   ├── AssetPanel.tsx         # Individual asset trading panel with controls
+│   ├── AdminConsole.tsx       # Real-time system console with logs
+│   ├── AssetManagementPanel.tsx # Asset configuration interface
+│   └── ui/                    # Shadcn/ui reusable components
+├── pages/                     # Route Pages
+│   ├── dashboard.tsx          # Main trading dashboard page
+│   ├── admin.tsx             # Admin panel with system controls
+│   ├── ai-logs.tsx           # AI decision log viewer
+│   ├── backtesting.tsx       # Strategy backtesting interface
+│   └── strategy-editor.tsx   # Trading strategy management
+├── hooks/                     # Custom React Hooks
+│   ├── useWebSocket.ts        # WebSocket connection management
+│   └── use-toast.ts          # Toast notification system
+└── lib/                      # Utilities
+    ├── queryClient.ts         # TanStack Query configuration
+    └── utils.ts              # Utility functions
 ```
 
-### Backend (Node.js + Express + TypeScript)
+### Backend Architecture (`server/`)
+
 ```
 server/
-├── services/             # Business logic services
-│   ├── trading.ts              # Core trading engine
-│   ├── alpaca.ts              # Alpaca API integration
-│   ├── openai.ts              # OpenAI API integration
-│   └── data-client.ts         # Market data fetching
-├── routes.ts             # API routes and WebSocket handlers
-├── storage.ts            # Data persistence layer
-├── index.ts              # Express server setup
-└── vite.ts               # Vite dev server integration
+├── services/                  # Business Logic Services
+│   ├── trading.ts            # Core trading engine with AI integration
+│   ├── alpaca.ts             # Alpaca API client and order management
+│   ├── openai.ts             # OpenAI API integration with logging
+│   ├── data-client.ts        # Market data fetching from multiple sources
+│   ├── ai-scheduler.ts       # Automated AI reflection scheduling
+│   ├── portfolio-tracker.ts  # Portfolio value tracking and CSV logging
+│   ├── position-tracker.ts   # Real-time position P&L tracking
+│   └── logger.ts             # System logging and console streaming
+├── routes.ts                 # API routes and WebSocket handlers
+├── storage.ts                # Data persistence layer with interface
+├── db.ts                     # Database connection (Drizzle + PostgreSQL)
+├── index.ts                  # Express server setup and initialization
+└── vite.ts                   # Vite dev server integration
 ```
 
-### Shared (TypeScript Types)
+### Shared Types (`shared/`)
+
 ```
 shared/
-└── schema.ts             # Database schema and shared types
+└── schema.ts                 # Database schema and TypeScript types
 ```
 
-## Key Components
+## Key File Deep Dive
 
-### 1. Trading Engine (`server/services/trading.ts`)
+### 1. `server/services/trading.ts` - Core Trading Engine
 
-**Core Functions:**
+**Purpose:** Central trading logic coordinator
+**Key Functions:**
 - `runTradingCycle()`: Main trading loop for each asset
-- `executeTrade()`: Handles order execution via Alpaca API
+- `executeTrade()`: Handles order execution via Alpaca API  
 - `getDashboardData()`: Aggregates real-time trading data
+- `pauseAsset()` / `resumeAsset()`: Trading controls
 
-**Flow:**
-1. Fetches historical market data (30 periods, 1-hour intervals)
-2. Calculates technical indicators (RSI, MACD, Bollinger Bands, SMAs)
-3. Sends market summary to OpenAI for ICT/SMC analysis
-4. Executes trades based on AI recommendations
-5. Updates positions and calculates P&L
-6. Broadcasts updates via WebSocket
+**Logic Flow:**
+```
+Asset Interval Trigger → Fetch Market Data → Calculate Indicators → 
+AI Analysis → Trade Decision → Order Execution → Position Update → 
+WebSocket Broadcast → Performance Calculation
+```
 
-### 2. OpenAI Integration (`server/services/openai.ts`)
+### 2. `server/services/openai.ts` - AI Integration
 
-**Core Functions:**
-- `analyzeMarketWithOpenAI()`: Sends market data to GPT-4o for analysis
-- `generateReflection()`: Creates performance analysis after trades
+**Purpose:** OpenAI API integration with comprehensive logging
+**Key Functions:**
+- `analyzeMarketWithOpenAI()`: Market analysis with GPT-4o
+- `generateReflection()`: Post-trade performance analysis
 
 **Features:**
-- ICT/SMC strategy prompting (Market Structure, Liquidity Grabs, Fair Value Gaps)
-- Comprehensive logging of every API call with timing and token usage
-- JSON response format for structured trading decisions
-- Error handling with fallback decisions
+- ICT/SMC strategy prompting (Market Structure, Liquidity, Order Flow)
+- Complete request/response logging with token usage
+- Structured JSON responses for trading decisions
+- Error handling with fallback mechanisms
 
-**Logged Data:**
-- Full AI reasoning and recommendations
-- Response time in milliseconds
-- Token usage (prompt/completion/total)
-- Market data sent to AI
-- Complete raw OpenAI response
-- Position sizing and risk parameters
+### 3. `server/services/alpaca.ts` - Broker Integration
 
-### 3. Alpaca Integration (`server/services/alpaca.ts`)
-
-**Core Functions:**
-- `getAccount()`: Fetches account equity and buying power
-- `getPositions()`: Retrieves current open positions
-- `placeOrder()`: Executes buy/sell orders
-- `getHistoricalData()`: Fetches market data for analysis
+**Purpose:** Alpaca Markets API integration for live trading
+**Key Functions:**
+- `getAccount()`: Account equity and buying power
+- `getPositions()`: Current position retrieval
+- `placeOrder()`: Buy/sell order execution
+- `getHistoricalData()`: Market data for analysis
 
 **Configuration:**
-- Uses paper trading environment for safety
-- Supports cryptocurrency trading (BTC/USD, SOL/USD)
-- Real-time position tracking and P&L calculation
+- Paper trading environment for safety
+- Cryptocurrency support (BTC/USD, SOL/USD, XRP/USD)
+- Real-time position and P&L tracking
 
-### 4. Data Storage (`server/storage.ts`)
+### 4. `server/storage.ts` - Data Persistence
 
-**Storage Interface:**
-- In-memory storage for development
-- Database-ready structure for production deployment
-- Supports trading assets, trades, positions, market data, AI reflections, and AI decision logs
+**Purpose:** Unified data access layer with PostgreSQL backend
+**Key Interfaces:**
+- `IStorage`: Complete CRUD operations interface
+- `DatabaseStorage`: PostgreSQL implementation using Drizzle ORM
 
-**Key Tables:**
-- `tradingAssets`: Asset configuration and trading intervals
-- `trades`: Historical trade execution records
-- `positions`: Current and historical position data
-- `aiDecisionLogs`: Comprehensive OpenAI response logging
-- `aiReflections`: Performance analysis and strategy improvements
+**Data Models:**
+- `tradingAssets`: Asset configuration and intervals
+- `trades`: Complete trade execution history
+- `positions`: Real-time and historical positions
+- `aiDecisionLogs`: Full OpenAI API call logging
+- `aiReflections`: Performance analysis and improvements
+- `persistentPnl`: Accumulated P&L across all trades
+- `tradingStrategies`: AI prompt management system
 
-### 5. WebSocket Communication (`server/routes.ts`)
+### 5. `server/services/position-tracker.ts` - P&L Management
 
+**Purpose:** Real-time position tracking and P&L calculation
+**Key Functions:**
+- `updateAssetPnL()`: Calculate and persist P&L from Alpaca positions
+- `calculateStats()`: Generate performance metrics (win rate, Sharpe ratio)
+
+**Logic:**
+- Fetches real Alpaca positions every cycle
+- Calculates unrealized P&L from market prices
+- Maintains realized P&L from completed trades
+- Provides accurate statistics for dashboard display
+
+### 6. `client/src/components/TradingDashboard.tsx` - Main Interface
+
+**Purpose:** Primary user interface for trading operations
 **Features:**
-- Asset-specific channels for real-time updates
-- Automatic reconnection with exponential backoff
-- Broadcasting of trading updates, chart data, and AI decisions
+- Multi-asset grid layout with real-time updates
+- Live price charts using Chart.js
+- Portfolio overview with total P&L
+- WebSocket integration for real-time data
 
-**Message Types:**
-- Trading updates (new positions, P&L changes)
-- Chart data (price and volume updates)
-- Statistics (win rate, Sharpe ratio, drawdown)
-- AI reflections and strategy improvements
+### 7. `client/src/pages/admin.tsx` - System Administration
 
-### 6. Real-time Dashboard (`client/src/components/`)
+**Purpose:** Administrative interface for system management
+**Features:**
+- Real-time system statistics
+- Market sentiment analysis
+- Asset management (add/edit/delete)
+- Strategy backtesting interface
+- API key management
+- Real-time console with system logs
 
-**TradingDashboard.tsx:**
-- Multi-asset monitoring interface
-- Live price charts with Chart.js
-- Real-time P&L and performance metrics
+### 8. `server/services/logger.ts` - System Monitoring
 
-**AssetPanel.tsx:**
-- Individual asset trading controls
-- Pause/resume trading functionality
-- Interval adjustment (1min to 1hour)
-- Live position display and charts
+**Purpose:** Comprehensive system logging and real-time console
+**Features:**
+- Captures all console output (info, error, warn, debug)
+- HTTP request logging with response times
+- WebSocket streaming to admin console
+- Log filtering, export, and clearing capabilities
 
-**AiLogsPanel.tsx:**
-- View all OpenAI API calls and responses
-- Filter by asset and limit results
-- Export logs as JSON or CSV
-- Real-time token usage and cost tracking
+## Database Schema & Relationships
 
-### 7. API Routes (`server/routes.ts`)
+### Core Tables
+- **tradingAssets**: Asset configuration (symbol, intervals, limits)
+- **trades**: Complete trade history with AI reasoning
+- **positions**: Position snapshots and P&L tracking  
+- **persistentPnl**: Accumulated P&L by asset for statistics
+- **aiDecisionLogs**: Full OpenAI API interactions
+- **aiReflections**: Performance analysis and improvements
+- **tradingStrategies**: AI prompt management with default selection
+- **backtestResults**: Historical strategy performance testing
 
-**Trading APIs:**
-- `GET /api/assets` - List configured trading assets
-- `GET /api/assets/:symbol/dashboard` - Get real-time dashboard data
+### Relationships
+- Assets → Trades (one-to-many)
+- Assets → Positions (one-to-many) 
+- Assets → PnL Records (one-to-many)
+- Strategies → AI Decisions (one-to-many)
 
-**AI Logging APIs:**
-- `GET /api/ai-logs` - Fetch AI decision logs with filtering
-- `GET /api/ai-logs/export/json` - Export logs as JSON
-- `GET /api/ai-logs/export/csv` - Export logs as CSV
+## Real-time Communication System
 
-**WebSocket Endpoints:**
-- `WS /ws` - Real-time trading updates and notifications
+### WebSocket Architecture
+- **Asset Channels**: `/ws` with asset subscription model
+- **Console Channel**: Real-time log streaming to admin panel
+- **Auto-reconnection**: Exponential backoff on connection loss
 
-## Technical Stack
+### Message Types
+- **Trading Updates**: Position changes, new trades, P&L updates
+- **Chart Data**: Real-time price and volume updates
+- **Statistics**: Win rates, Sharpe ratios, performance metrics
+- **AI Logs**: Decision reasoning and execution results
+- **Console Logs**: System messages, errors, request logs
 
-### Dependencies
-- **Frontend**: React 18, TypeScript, TanStack Query, Wouter, Shadcn/ui, Chart.js
-- **Backend**: Node.js, Express, TypeScript, WebSocket (ws)
-- **Trading**: Alpaca Markets API (@alpacahq/alpaca-trade-api)
-- **AI**: OpenAI API (gpt-4o model)
-- **Database**: PostgreSQL with Drizzle ORM (ready for production)
-- **Build**: Vite, esbuild
+## API Endpoints
 
-### Development Setup
+### Trading APIs
+```
+GET /api/assets                    # List all trading assets
+GET /api/assets/:symbol/dashboard  # Real-time dashboard data
+POST /api/positions/:id/close      # Close specific position
+GET /api/overview                  # Portfolio statistics
+```
+
+### AI & Strategy APIs
+```
+GET /api/ai-logs                   # AI decision logs with filtering
+GET /api/strategies                # Trading strategy management
+POST /api/strategies               # Create new strategy
+PUT /api/strategies/:id            # Update strategy
+DELETE /api/strategies/:id         # Delete strategy
+```
+
+### Admin APIs
+```
+GET /api/admin/system-stats        # System statistics
+GET /api/admin/market-sentiment    # AI market sentiment analysis
+POST /api/admin/export-and-reset   # Export data and reset system
+GET /api/admin/console/logs        # Console log retrieval
+POST /api/admin/console/clear      # Clear console logs
+```
+
+### Backtesting APIs
+```
+GET /api/backtests                 # List backtest results
+POST /api/backtests/run           # Execute strategy backtest
+DELETE /api/backtests/:id         # Delete backtest result
+```
+
+## Technical Implementation Details
+
+### AI Strategy System
+- **Default Strategy**: Single active strategy for all trading decisions
+- **Custom Prompts**: System prompts define AI personality and approach
+- **ICT/SMC Integration**: Market structure analysis in AI prompts
+- **Performance Feedback**: AI reflections improve strategy over time
+
+### Risk Management
+- **Position Sizing**: Configurable percentage of account equity
+- **Stop Loss/Take Profit**: Automated exit strategies
+- **Account Protection**: Maximum position limits and safety checks
+- **Real-time Monitoring**: Continuous P&L and drawdown tracking
+
+### Performance Analytics
+- **Win Rate Calculation**: Based on completed trades
+- **Sharpe Ratio**: Risk-adjusted return measurement
+- **Drawdown Tracking**: Maximum portfolio decline monitoring
+- **Trade Frequency Analysis**: Optimal timing identification
+
+### Data Sources
+- **Primary**: Alpaca Markets API for trading and market data
+- **Fallback**: CryptoCompare and Coinbase APIs for price data
+- **Real-time**: WebSocket streams for live updates
+
+## Development & Deployment
+
+### Environment Setup
 ```bash
-npm install
-npm run dev  # Starts both frontend and backend
+npm install                 # Install dependencies
+npm run dev                # Start development server
+npm run db:push            # Push database schema changes
 ```
 
 ### Environment Variables
 ```
-ALPACA_API_KEY=your_alpaca_api_key
-ALPACA_SECRET_KEY=your_alpaca_secret_key
-OPENAI_API_KEY=your_openai_api_key
-DATABASE_URL=your_postgresql_url (for production)
+ALPACA_API_KEY=paper_trading_key
+ALPACA_SECRET_KEY=paper_trading_secret
+OPENAI_API_KEY=your_openai_key
+DATABASE_URL=postgresql://connection_string
 ```
 
-## Trading Strategy
+### Production Considerations
+- **Database**: PostgreSQL with Drizzle ORM migrations
+- **Monitoring**: PM2 process management with health checks
+- **Security**: Environment-based API key management
+- **Scaling**: WebSocket connection pooling and load balancing
 
-### ICT/SMC Concepts Implemented
-- **Market Structure**: Break of Structure (BOS), Change of Character (CHoCH)
-- **Liquidity**: Liquidity grabs, inducements, relative equal highs/lows
-- **Order Flow**: Fair value gaps (FVG), order blocks (OB)
-- **Zones**: Premium/discount zones, imbalance areas
-- **Session Analysis**: London/NY killzone timing
-
-### Risk Management
-- Configurable position sizing (0-100% of account equity)
-- Stop-loss and take-profit automation
-- Real-time P&L monitoring
-- Drawdown tracking and alerts
-
-### Performance Analytics
-- Win rate calculation
-- Sharpe ratio analysis
-- Average win/loss tracking
-- Trade frequency optimization
-
-## AI Decision Logging
-
-### Comprehensive Tracking
-Every OpenAI API call is logged with:
-- **Request Data**: Market summary, technical indicators, current positions
-- **Response Data**: Trading recommendation, reasoning, position sizing
-- **Metadata**: Response time, token usage, model version
-- **Raw Data**: Complete OpenAI API response for debugging
-
-### Export Capabilities
-- **JSON Export**: Full structured data for analysis
-- **CSV Export**: Spreadsheet-compatible format for reporting
-- **Real-time Viewing**: Dashboard interface with filtering and search
-
-### Cost Tracking
-- Prompt token count
-- Completion token count
-- Total token usage per decision
-- Response time monitoring for performance optimization
-
-## Deployment
-
-### Development
-- Vite dev server with HMR for frontend development
-- tsx for backend TypeScript execution
-- In-memory storage for rapid prototyping
-
-### Production
-- Vite production build with code splitting
-- PostgreSQL database with Drizzle migrations
-- PM2 or Docker for process management
-- Environment-based configuration
-
-## Monitoring and Debugging
-
-### Logging
-- Structured console logging for all trading activities
-- AI decision logging with full context
-- WebSocket connection status tracking
-- Error handling with detailed stack traces
-
-### Dashboard Features
-- Real-time connection status indicators
-- Live position and P&L updates
-- Trading activity feed
-- AI reflection and performance insights
-
-## Security Considerations
-
-### API Key Management
-- Environment variable storage
-- No hardcoded credentials
-- Separate development/production environments
-
-### Trading Safety
-- Paper trading environment by default
-- Position size limits
-- Stop-loss enforcement
-- Manual override capabilities
-
-This system provides a complete AI-powered trading solution with full transparency into AI decision-making, real-time monitoring, and comprehensive logging for analysis and optimization.
+This system provides a complete AI-powered trading solution with full transparency into AI decision-making, comprehensive logging, real-time monitoring, and advanced strategy management capabilities.
