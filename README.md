@@ -1,5 +1,53 @@
 # AI Trading Bot System
 
+## How to Run
+
+### Prerequisites
+- Node.js 20+ installed
+- PostgreSQL database (automatically provided in Replit)
+- Required API keys (see Environment Variables section below)
+
+### Quick Start
+
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Set Up Environment Variables**
+   You'll need these API keys (add them via Replit Secrets):
+   - `ALPACA_API_KEY` - Your Alpaca trading API key
+   - `ALPACA_SECRET_KEY` - Your Alpaca trading secret key
+   - `OPENAI_API_KEY` - Your OpenAI API key for AI analysis
+   - `DATABASE_URL` - PostgreSQL connection string (auto-provided in Replit)
+
+3. **Initialize Database**
+   ```bash
+   npm run db:push
+   ```
+
+4. **Start the Application**
+   ```bash
+   npm run dev
+   ```
+
+5. **Access the Dashboard**
+   - Open your browser to the provided URL (usually shown in the console)
+   - The application runs on port 5000 by default
+
+### Development Commands
+- `npm run dev` - Start development server with hot reload
+- `npm run db:push` - Push database schema changes
+- `npm run build` - Build for production
+
+### Features Available After Setup
+- Real-time AI trading with OpenAI analysis
+- Live dashboard with trading statistics
+- Manual trading interface
+- Backtesting functionality
+- Strategy editor and management
+- Admin console with complete system logs
+
 ## Overview
 
 A sophisticated AI-powered cryptocurrency trading bot that integrates OpenAI's GPT-4o with Alpaca Markets for live trading. The system employs ICT (Inner Circle Trader) and SMC (Smart Money Concepts) strategies for intelligent market analysis and decision-making. Features real-time dashboard monitoring, comprehensive AI decision logging, automated trading execution, backtesting, strategy management, and an admin console with real-time system monitoring.
