@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, TrendingUp, Settings, BarChart3, Play, Pause, Key, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Activity, TrendingUp, Settings, BarChart3, Play, Pause, Key, CheckCircle, XCircle, AlertCircle, Terminal } from "lucide-react";
 import { AssetManagementPanel } from "@/components/AssetManagementPanel";
+import { AdminConsole } from "@/components/AdminConsole";
 
 interface SystemStats {
   totalPnl: number;
@@ -382,9 +383,10 @@ export default function AdminPanel() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="backtest" className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full max-w-2xl bg-slate-800/50 border-slate-700">
+          <TabsList className="grid grid-cols-5 w-full max-w-4xl bg-slate-800/50 border-slate-700">
             <TabsTrigger value="backtest">Backtesting</TabsTrigger>
             <TabsTrigger value="sentiment">Market Sentiment</TabsTrigger>
+            <TabsTrigger value="console">Console</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -471,6 +473,11 @@ export default function AdminPanel() {
           {/* Market Sentiment Tab */}
           <TabsContent value="sentiment" className="space-y-6">
             <MarketSentimentPanel />
+          </TabsContent>
+
+          {/* Console Tab */}
+          <TabsContent value="console" className="space-y-6">
+            <AdminConsole />
           </TabsContent>
 
           {/* API Keys Tab */}

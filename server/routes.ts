@@ -9,12 +9,46 @@ import { alpacaClient } from "./services/alpaca";
 import { db } from "./db";
 import { backtestResults, marketData, trades, aiReflections, aiDecisionLogs } from "@shared/schema";
 import type { WebSocketMessage } from "@shared/schema";
+import { logger, type LogEntry } from "./services/logger";
 
 const tradingService = new TradingService();
 const wsClients = new Map<string, Set<WebSocket>>();
 const tradingIntervals = new Map<string, NodeJS.Timeout>();
+const consoleClients = new Set<WebSocket>();
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Request logging middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.request(req.method, req.url, res.statusCode, duration);
+    });
+    next();
+  });
+
+  // Console logs API endpoints
+  app.get("/api/admin/console/logs", async (req, res) => {
+    try {
+      const { limit } = req.query;
+      const logs = logger.getLogs(limit ? parseInt(limit as string) : undefined);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching console logs:", error);
+      res.status(500).json({ error: "Failed to fetch console logs" });
+    }
+  });
+
+  app.post("/api/admin/console/clear", async (_req, res) => {
+    try {
+      logger.clear();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing console logs:", error);
+      res.status(500).json({ error: "Failed to clear console logs" });
+    }
+  });
+
   // API Routes
   app.get("/api/assets", async (_req, res) => {
     try {
@@ -163,8 +197,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   wss.on("connection", (ws, req) => {
     console.log(`WebSocket connection established`);
     let currentAsset: string | null = null;
+    let isConsoleSubscriber = false;
+    let logUnsubscribe: (() => void) | null = null;
 
-    // Handle client subscription to specific assets
+    // Handle client subscription to specific assets or console logs
     ws.on("message", async (data) => {
       try {
         const message = JSON.parse(data.toString());
@@ -197,6 +233,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Send initial data
           sendDashboardUpdate(currentAsset);
+        } else if (message.action === 'subscribe_console') {
+          // Subscribe to console logs
+          isConsoleSubscriber = true;
+          consoleClients.add(ws);
+          
+          // Set up real-time log streaming
+          logUnsubscribe = logger.subscribe((log) => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'console_log',
+                log
+              }));
+            }
+          });
+
+          // Send recent logs immediately
+          const recentLogs = logger.getLogs(100);
+          ws.send(JSON.stringify({
+            type: 'console_logs_batch',
+            logs: recentLogs
+          }));
+
+          console.log(`Client subscribed to console logs`);
         } else if (currentAsset) {
           // Handle other WebSocket messages for the subscribed asset
           await handleWebSocketMessage(currentAsset, message);
@@ -211,6 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     ws.on("close", () => {
       console.log(`WebSocket connection closed`);
+      
+      // Clean up asset subscription
       if (currentAsset) {
         const clients = wsClients.get(currentAsset);
         if (clients) {
@@ -219,6 +280,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             wsClients.delete(currentAsset);
             stopTradingLoop(currentAsset);
           }
+        }
+      }
+      
+      // Clean up console subscription
+      if (isConsoleSubscriber) {
+        consoleClients.delete(ws);
+        if (logUnsubscribe) {
+          logUnsubscribe();
         }
       }
     });
