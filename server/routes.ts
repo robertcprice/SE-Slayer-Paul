@@ -89,6 +89,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Portfolio overview endpoint - aggregates persistent P&L from all assets
+  app.get("/api/overview", async (req, res) => {
+    try {
+      const assets = await storage.getAllTradingAssets();
+      let totalPnl = 0;
+      let totalTrades = 0;
+      let totalWins = 0;
+      let totalLosses = 0;
+      let allSharpeRatios: number[] = [];
+      
+      for (const asset of assets) {
+        // Get persistent P&L instead of just current positions
+        const persistentPnl = await storage.getPersistentPnl(asset.id);
+        if (persistentPnl) {
+          totalPnl += parseFloat(persistentPnl.totalPnl || "0");
+        }
+        
+        // Get trade statistics
+        const trades = await storage.getTradesByAsset(asset.id);
+        const completedTrades = trades.filter(trade => {
+          const pnl = parseFloat(trade.pnl || "0");
+          return Math.abs(pnl) > 0.01; // Only count trades with meaningful P&L
+        });
+        
+        totalTrades += completedTrades.length;
+        
+        // Count wins and losses based on actual trade P&L
+        const winningTrades = completedTrades.filter(trade => parseFloat(trade.pnl || "0") > 0);
+        const losingTrades = completedTrades.filter(trade => parseFloat(trade.pnl || "0") < 0);
+        
+        totalWins += winningTrades.length;
+        totalLosses += losingTrades.length;
+        
+        // Get Sharpe ratio from stats
+        const stats = await storage.calculateStats(asset.id);
+        if (stats.sharpeRatio > 0) {
+          allSharpeRatios.push(stats.sharpeRatio);
+        }
+      }
+      
+      const winRate = totalTrades > 0 ? totalWins / totalTrades : 0;
+      const avgSharpeRatio = allSharpeRatios.length > 0 ? 
+        allSharpeRatios.reduce((sum, ratio) => sum + ratio, 0) / allSharpeRatios.length : 0;
+      
+      const stats = {
+        totalPnl,
+        winRate,
+        sharpeRatio: avgSharpeRatio,
+        totalTrades,
+        drawdown: 0,
+        averageWin: 0,
+        averageLoss: 0,
+      };
+      
+      console.log(`📊 Portfolio Overview: Total P&L $${totalPnl.toFixed(2)}, Win Rate ${(winRate * 100).toFixed(1)}%, Total Trades ${totalTrades}`);
+      
+      res.json({ stats });
+    } catch (error) {
+      console.error("Overview error:", error);
+      res.status(500).json({ error: "Failed to fetch overview data" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server setup - using specific path to avoid conflict with Vite HMR

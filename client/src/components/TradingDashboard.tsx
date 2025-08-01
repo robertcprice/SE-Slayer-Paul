@@ -183,64 +183,89 @@ export default function TradingDashboard() {
     const fetchAggregateData = async () => {
       if (!assets) return;
 
-      let totalPnl = 0;
-      let allPositions: Position[] = [];
-      let allTrades: any[] = [];
-      let totalTrades = 0;
-      let totalWinRate = 0;
-      let assetCount = 0;
-      let latestAccountBalance: AccountBalance | undefined;
+      try {
+        // Use the new overview endpoint for aggregated P&L and stats
+        const overviewResponse = await fetch('/api/overview');
+        const overviewData = await overviewResponse.json();
+        
+        let allPositions: Position[] = [];
+        let allTrades: any[] = [];
+        let latestAccountBalance: AccountBalance | undefined;
 
-      for (const asset of assets) {
-        try {
-          const response = await fetch(`/api/assets/${encodeURIComponent(asset.symbol)}/dashboard`);
-          const data = await response.json();
-          
-          // Store account balance from first asset (same for all)
-          if (data.accountBalance && !latestAccountBalance) {
-            latestAccountBalance = data.accountBalance;
+        // Still need to fetch individual asset data for positions and trades
+        for (const asset of assets) {
+          try {
+            const response = await fetch(`/api/assets/${encodeURIComponent(asset.symbol)}/dashboard`);
+            const data = await response.json();
+            
+            // Store account balance from first asset (same for all)
+            if (data.accountBalance && !latestAccountBalance) {
+              latestAccountBalance = data.accountBalance;
+            }
+            
+            allPositions.push(...data.positions);
+            allTrades.push(...data.feed);
+          } catch (error) {
+            console.error(`Failed to fetch data for ${asset.symbol}:`, error);
           }
-          
-          // Calculate total P&L: realized from closed positions + unrealized from open positions
-          const realizedPnl = data.positions
-            .filter((pos: any) => !pos.isOpen)
-            .reduce((sum: number, pos: any) => sum + parseFloat(pos.unrealizedPnl || "0"), 0);
-          
-          const unrealizedPnl = data.positions
-            .filter((pos: any) => pos.isOpen)
-            .reduce((sum: number, pos: any) => sum + parseFloat(pos.unrealizedPnl || "0"), 0);
-          
-          const assetPnl = realizedPnl + unrealizedPnl;
-          
-          totalPnl += assetPnl;
-          allPositions.push(...data.positions);
-          allTrades.push(...data.feed);
-          totalTrades += data.stats.totalTrades;
-          totalWinRate += data.stats.winRate;
-          assetCount++;
-        } catch (error) {
-          console.error(`Failed to fetch data for ${asset.symbol}:`, error);
         }
-      }
 
-      setAllPositions(allPositions);
-      setAllTrades(allTrades.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      ));
-      
-      setAggregateStats({
-        totalPnl,
-        winRate: assetCount > 0 ? totalWinRate / assetCount : 0,
-        sharpeRatio: 0,
-        totalTrades,
-        drawdown: 0,
-        averageWin: 0,
-        averageLoss: 0,
-      });
-      
-      // Update account balance
-      if (latestAccountBalance) {
+        // Use the aggregated stats from overview endpoint
+        setAggregateStats(overviewData.stats);
+        setAllPositions(allPositions);
+        setAllTrades(allTrades);
         setAccountBalance(latestAccountBalance);
+      } catch (error) {
+        console.error('Failed to fetch overview data:', error);
+        // Fallback to old manual aggregation method
+        let totalPnl = 0;
+        let allPositions: Position[] = [];
+        let allTrades: any[] = [];
+        let totalTrades = 0;
+        let totalWinRate = 0;
+        let assetCount = 0;
+        let latestAccountBalance: AccountBalance | undefined;
+
+        for (const asset of assets) {
+          try {
+            const response = await fetch(`/api/assets/${encodeURIComponent(asset.symbol)}/dashboard`);
+            const data = await response.json();
+            
+            if (data.accountBalance && !latestAccountBalance) {
+              latestAccountBalance = data.accountBalance;
+            }
+            
+            // Use the totalPnl from individual asset stats (now includes persistent P&L)
+            totalPnl += data.stats.totalPnl;
+            allPositions.push(...data.positions);
+            allTrades.push(...data.feed);
+            totalTrades += data.stats.totalTrades;
+            totalWinRate += data.stats.winRate;
+            assetCount++;
+          } catch (error) {
+            console.error(`Failed to fetch data for ${asset.symbol}:`, error);
+          }
+        }
+
+        setAllPositions(allPositions);
+        setAllTrades(allTrades.sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        ));
+        
+        setAggregateStats({
+          totalPnl,
+          winRate: assetCount > 0 ? totalWinRate / assetCount : 0,
+          sharpeRatio: 0,
+          totalTrades,
+          drawdown: 0,
+          averageWin: 0,
+          averageLoss: 0,
+        });
+        
+        // Update account balance
+        if (latestAccountBalance) {
+          setAccountBalance(latestAccountBalance);
+        }
       }
     };
 

@@ -180,6 +180,15 @@ export class TradingService {
     console.log(`📊 Real total P&L for ${assetSymbol}: $${totalRealPnl.toFixed(2)} (unrealized) + $${realizedPnl.toFixed(2)} (realized) = $${totalPersistentPnl.toFixed(2)} (total)`);
     
 
+    // Get stats including win rate from storage - this uses the correct persistent P&L calculation
+    const calculatedStats = await storage.calculateStats(asset.id);
+    
+    // Override the total P&L with our persistent P&L value, but keep other calculated stats
+    stats = {
+      ...calculatedStats,
+      totalPnl: totalPersistentPnl // Use our persistent P&L calculation
+    };
+
     // Get completed trades from our database (trades created when positions were closed)
     const completedTrades = await storage.getTradesByAsset(asset.id, 20);
     const feed: TradeFeed[] = completedTrades
