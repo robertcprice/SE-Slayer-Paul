@@ -259,16 +259,16 @@ export class DatabaseStorage implements IStorage {
 
   async getTradesByAsset(assetId: string, limit?: number): Promise<Trade[]> {
     try {
-      let query = db.select()
+      const baseQuery = db.select()
         .from(trades)
         .where(eq(trades.assetId, assetId))
         .orderBy(desc(trades.timestamp));
       
       if (limit) {
-        query = query.limit(limit);
+        return await baseQuery.limit(limit);
       }
       
-      return await query;
+      return await baseQuery;
     } catch (error) {
       console.error(`Error fetching trades for asset ${assetId}:`, error);
       return [];
@@ -288,6 +288,63 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error creating trade:`, error);
       throw error;
+    }
+  }
+
+  async updateTradeStatus(tradeId: string, status: 'open' | 'closed', pnl?: number, closedAt?: Date): Promise<Trade | undefined> {
+    try {
+      const updates: any = { status };
+      
+      if (status === 'closed') {
+        updates.closedAt = closedAt || new Date();
+        if (pnl !== undefined) {
+          updates.pnl = pnl.toString();
+        }
+      }
+      
+      const [updatedTrade] = await db.update(trades)
+        .set(updates)
+        .where(eq(trades.id, tradeId))
+        .returning();
+      
+      if (updatedTrade && status === 'closed') {
+        console.log(`✅ Trade ${tradeId} closed with P&L: $${pnl || 0}`);
+        await this.logToFile(this.tradeLogFile, 
+          `CLOSED: Trade ${tradeId} - P&L: $${pnl || 0}`
+        );
+      }
+      
+      return updatedTrade || undefined;
+    } catch (error) {
+      console.error(`Error updating trade status:`, error);
+      return undefined;
+    }
+  }
+
+  async getOpenTradesForAsset(assetId: string): Promise<Trade[]> {
+    try {
+      return await db.select().from(trades)
+        .where(and(
+          eq(trades.assetId, assetId),
+          eq(trades.status, 'open')
+        ));
+    } catch (error) {
+      console.error(`Error fetching open trades for asset ${assetId}:`, error);
+      return [];
+    }
+  }
+
+  async getClosedTradesForAsset(assetId: string): Promise<Trade[]> {
+    try {
+      return await db.select().from(trades)
+        .where(and(
+          eq(trades.assetId, assetId),
+          eq(trades.status, 'closed')
+        ))
+        .orderBy(desc(trades.closedAt));
+    } catch (error) {
+      console.error(`Error fetching closed trades for asset ${assetId}:`, error);
+      return [];
     }
   }
 
@@ -384,7 +441,7 @@ export class DatabaseStorage implements IStorage {
         // For sell trades, calculate P&L based on available data
         if (trade.action === "SELL" && trade.executionResult) {
           try {
-            const result = JSON.parse(trade.executionResult as string);
+            const result = JSON.parse(trade.executionResult as string || '{}');
             const executedPrice = result.executedPrice || parseFloat(trade.price || "0");
             const executedQuantity = result.executedQuantity || parseFloat(trade.quantity || "0");
             
@@ -524,7 +581,7 @@ export class DatabaseStorage implements IStorage {
       // Get persistent P&L data which contains the real win/loss information
       const persistentPnl = await this.getPersistentPnl(assetId);
       const totalPnl = persistentPnl ? parseFloat(persistentPnl.totalPnl || "0") : 0;
-      const realizedPnl = persistentPnl ? parseFloat(persistentPnl.realizedPnl || "0") : 0;
+      const realizedPnl = persistentPnl ? parseFloat(persistentPnl.realizedPnl?.toString() || "0") : 0;
       
       // Check if this asset has completed trades by looking at realized P&L
       if (Math.abs(realizedPnl) < 0.01) {
@@ -747,11 +804,11 @@ export class DatabaseStorage implements IStorage {
   // Backtesting
   async getBacktestResults(limit?: number): Promise<BacktestResult[]> {
     try {
-      let query = db.select().from(backtestResults).orderBy(desc(backtestResults.createdAt));
+      const baseQuery = db.select().from(backtestResults).orderBy(desc(backtestResults.createdAt));
       if (limit) {
-        query = query.limit(limit);
+        return await baseQuery.limit(limit);
       }
-      const results = await query;
+      const results = await baseQuery;
       return results;
     } catch (error) {
       console.error("Error fetching backtest results:", error);
@@ -831,7 +888,7 @@ export class DatabaseStorage implements IStorage {
       console.log("✅ All trading data has been reset successfully");
       
       // Log to persistent file
-      await this.logToFile(this.tradingLogFile, "SYSTEM RESET - All trading data cleared");
+      await this.logToFile(this.tradeLogFile, "SYSTEM RESET - All trading data cleared");
       
     } catch (error) {
       console.error("❌ Error resetting trading data:", error);

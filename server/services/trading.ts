@@ -294,6 +294,7 @@ export class TradingService {
           executedQuantity: quantity,
         },
         pnl: "0",
+        status: "open", // New trades start as open
       });
 
       console.log(`✅ AI ${aiDecision.recommendation} executed for ${asset.symbol}: ${quantity} @ $${currentPrice}`);

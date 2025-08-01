@@ -1133,6 +1133,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(403).json({ error: "Manual trading disabled - use Alpaca dashboard directly" });
   });
 
+  // Close trade endpoint
+  app.post("/api/trades/:tradeId/close", async (req, res) => {
+    try {
+      const { tradeId } = req.params;
+      const { pnl } = req.body;
+
+      const updatedTrade = await storage.updateTradeStatus(tradeId, 'closed', pnl);
+      
+      if (updatedTrade) {
+        res.json({ success: true, trade: updatedTrade });
+      } else {
+        res.status(404).json({ error: 'Trade not found' });
+      }
+    } catch (error) {
+      console.error('Close trade error:', error);
+      res.status(500).json({ error: 'Failed to close trade' });
+    }
+  });
+
   // Close position endpoint
   app.post("/api/positions/:id/close", async (req, res) => {
     try {
@@ -1177,9 +1196,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const side = parseFloat(positionData.qty || "0") > 0 ? "long" : "short";
             const currentPrice = quantity > 0 ? Math.abs(marketValue / quantity) : avgEntryPrice;
             
-            // Create a closing trade record
+            // Create a closing trade record with CLOSED status
             const closingAction = side === "long" ? "SELL" : "BUY";
-            await storage.createTrade({
+            const closingTrade = await storage.createTrade({
               assetId: asset.id,
               action: closingAction,
               quantity: quantity.toString(),
@@ -1199,7 +1218,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 alpaca: true
               },
               pnl: unrealizedPnl.toFixed(2),
+              status: 'closed',
+              closedAt: new Date()
             });
+
+            // Update the trade status to closed immediately
+            await storage.updateTradeStatus(closingTrade.id, 'closed', unrealizedPnl);
 
             console.log(`🔴 Closed Alpaca ${side} position for ${assetSymbol}: P&L $${unrealizedPnl.toFixed(2)}`);
           }

@@ -30,20 +30,23 @@ export class PositionTracker {
   private async checkAssetPositions(assetId: string, symbol: string): Promise<void> {
     try {
       // Get current Alpaca positions for this asset
-      const currentPositions = await alpacaClient.getPositions(symbol);
-      const currentPosition = currentPositions.length > 0 ? currentPositions[0] : null;
+      const allPositions = await alpacaClient.getPositions();
+      const currentPosition = allPositions.find(pos => pos.symbol === symbol) || null;
       
       const positionKey = `${symbol}`;
       const lastKnownPosition = this.lastKnownPositions.get(positionKey);
       
       if (lastKnownPosition && !currentPosition) {
-        // Position was closed! Capture the realized P&L
+        // Position was closed! Capture the realized P&L and close any open trades
         const realizedPnL = lastKnownPosition.lastPnL;
         
         console.log(`🔄 Position closed for ${symbol}: Capturing realized P&L of $${realizedPnL.toFixed(2)}`);
         
         // Add this to persistent realized P&L
         await storage.addRealizedPnl(assetId, realizedPnL);
+        
+        // Close any open trades for this asset
+        await this.closeOpenTradesForAsset(assetId, realizedPnL);
         
         // Remove from tracking
         this.lastKnownPositions.delete(positionKey);
@@ -65,6 +68,24 @@ export class PositionTracker {
       
     } catch (error) {
       console.error(`Error checking positions for ${symbol}:`, error);
+    }
+  }
+
+  // Close any open trades when their corresponding Alpaca position is closed
+  private async closeOpenTradesForAsset(assetId: string, realizedPnL: number): Promise<void> {
+    try {
+      const openTrades = await storage.getOpenTradesForAsset(assetId);
+      
+      if (openTrades.length > 0) {
+        console.log(`✅ Closing ${openTrades.length} open trades for asset ${assetId}`);
+        
+        for (const trade of openTrades) {
+          await storage.updateTradeStatus(trade.id, 'closed', realizedPnL);
+          console.log(`🔄 Closed trade ${trade.id} with P&L: $${realizedPnL.toFixed(2)}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error closing open trades for asset ${assetId}:`, error);
     }
   }
 
