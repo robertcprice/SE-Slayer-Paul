@@ -161,7 +161,8 @@ export class DatabaseStorage implements IStorage {
 
   async getAllTradingAssets(): Promise<TradingAsset[]> {
     try {
-      return await db.select().from(tradingAssets);
+      // Only return active assets for dashboard display
+      return await db.select().from(tradingAssets).where(eq(tradingAssets.isActive, true));
     } catch (error) {
       console.error(`Error fetching all trading assets:`, error);
       return [];
@@ -184,8 +185,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTradingAsset(asset: InsertTradingAsset): Promise<TradingAsset> {
-    const [newAsset] = await db.insert(tradingAssets).values(asset).returning();
-    return newAsset;
+    try {
+      // Check if an inactive asset with this symbol exists
+      const existingAsset = await db.select()
+        .from(tradingAssets)
+        .where(and(
+          eq(tradingAssets.symbol, asset.symbol),
+          eq(tradingAssets.isActive, false)
+        ));
+
+      if (existingAsset.length > 0) {
+        // Reactivate existing asset instead of creating new one
+        console.log(`🔄 Reactivating existing asset ${asset.symbol} with ID ${existingAsset[0].id}`);
+        const [reactivatedAsset] = await db.update(tradingAssets)
+          .set({ 
+            isActive: true,
+            isPaused: false,
+            ...asset // Apply any new configuration
+          })
+          .where(eq(tradingAssets.id, existingAsset[0].id))
+          .returning();
+        
+        console.log(`✅ Restored ${asset.symbol} with all historical data intact`);
+        return reactivatedAsset;
+      }
+
+      // Create new asset if none exists
+      const [newAsset] = await db.insert(tradingAssets).values(asset).returning();
+      console.log(`➕ Created new trading asset ${asset.symbol} with ID ${newAsset.id}`);
+      return newAsset;
+    } catch (error) {
+      console.error(`❌ Error creating/reactivating trading asset:`, error);
+      throw error;
+    }
   }
 
   async updateTradingAsset(id: string, updates: Partial<TradingAsset>): Promise<TradingAsset | undefined> {
@@ -198,50 +230,29 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTradingAsset(id: string): Promise<boolean> {
     try {
-      // Delete all related data in the correct order (child tables first)
-      console.log(`🗑️ Deleting all related data for asset ${id}`);
+      // Instead of deleting all data, just mark the asset as inactive
+      // This preserves all historical data while removing it from dashboard
+      console.log(`🗑️ Deactivating trading asset ${id} (preserving historical data)`);
       
-      // Delete P&L history
-      await db.delete(pnlHistory).where(eq(pnlHistory.assetId, id));
-      console.log(`✓ Deleted P&L history for asset ${id}`);
+      const result = await db.update(tradingAssets)
+        .set({ 
+          isActive: false,
+          isPaused: true 
+        })
+        .where(eq(tradingAssets.id, id))
+        .returning();
       
-      // Delete persistent P&L
-      await db.delete(persistentPnl).where(eq(persistentPnl.assetId, id));
-      console.log(`✓ Deleted persistent P&L for asset ${id}`);
-      
-      // Delete AI decision logs
-      await db.delete(aiDecisionLogs).where(eq(aiDecisionLogs.assetId, id));
-      console.log(`✓ Deleted AI decision logs for asset ${id}`);
-      
-      // Delete AI reflections
-      await db.delete(aiReflections).where(eq(aiReflections.assetId, id));
-      console.log(`✓ Deleted AI reflections for asset ${id}`);
-      
-      // Delete market data
-      await db.delete(marketData).where(eq(marketData.assetId, id));
-      console.log(`✓ Deleted market data for asset ${id}`);
-      
-      // Delete positions
-      await db.delete(positions).where(eq(positions.assetId, id));
-      console.log(`✓ Deleted positions for asset ${id}`);
-      
-      // Delete trades
-      await db.delete(trades).where(eq(trades.assetId, id));
-      console.log(`✓ Deleted trades for asset ${id}`);
-      
-      // Finally delete the asset itself
-      const result = await db.delete(tradingAssets).where(eq(tradingAssets.id, id));
-      const success = (result.rowCount || 0) > 0;
+      const success = result.length > 0;
       
       if (success) {
-        console.log(`✅ Successfully deleted trading asset ${id} and all related data`);
+        console.log(`✅ Successfully deactivated trading asset ${id} - data preserved`);
       } else {
         console.log(`⚠️ Trading asset ${id} not found`);
       }
       
       return success;
     } catch (error) {
-      console.error(`❌ Error deleting trading asset ${id}:`, error);
+      console.error(`❌ Error deactivating trading asset ${id}:`, error);
       return false;
     }
   }
