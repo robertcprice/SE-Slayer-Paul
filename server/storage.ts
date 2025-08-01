@@ -198,10 +198,50 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTradingAsset(id: string): Promise<boolean> {
     try {
+      // Delete all related data in the correct order (child tables first)
+      console.log(`🗑️ Deleting all related data for asset ${id}`);
+      
+      // Delete P&L history
+      await db.delete(pnlHistory).where(eq(pnlHistory.assetId, id));
+      console.log(`✓ Deleted P&L history for asset ${id}`);
+      
+      // Delete persistent P&L
+      await db.delete(persistentPnl).where(eq(persistentPnl.assetId, id));
+      console.log(`✓ Deleted persistent P&L for asset ${id}`);
+      
+      // Delete AI decision logs
+      await db.delete(aiDecisionLogs).where(eq(aiDecisionLogs.assetId, id));
+      console.log(`✓ Deleted AI decision logs for asset ${id}`);
+      
+      // Delete AI reflections
+      await db.delete(aiReflections).where(eq(aiReflections.assetId, id));
+      console.log(`✓ Deleted AI reflections for asset ${id}`);
+      
+      // Delete market data
+      await db.delete(marketData).where(eq(marketData.assetId, id));
+      console.log(`✓ Deleted market data for asset ${id}`);
+      
+      // Delete positions
+      await db.delete(positions).where(eq(positions.assetId, id));
+      console.log(`✓ Deleted positions for asset ${id}`);
+      
+      // Delete trades
+      await db.delete(trades).where(eq(trades.assetId, id));
+      console.log(`✓ Deleted trades for asset ${id}`);
+      
+      // Finally delete the asset itself
       const result = await db.delete(tradingAssets).where(eq(tradingAssets.id, id));
-      return (result.rowCount || 0) > 0;
+      const success = (result.rowCount || 0) > 0;
+      
+      if (success) {
+        console.log(`✅ Successfully deleted trading asset ${id} and all related data`);
+      } else {
+        console.log(`⚠️ Trading asset ${id} not found`);
+      }
+      
+      return success;
     } catch (error) {
-      console.error(`Error deleting trading asset ${id}:`, error);
+      console.error(`❌ Error deleting trading asset ${id}:`, error);
       return false;
     }
   }
