@@ -583,6 +583,44 @@ export class DatabaseStorage implements IStorage {
       const totalPnl = persistentPnl ? parseFloat(persistentPnl.totalPnl || "0") : 0;
       const realizedPnl = persistentPnl ? parseFloat(persistentPnl.realizedPnl?.toString() || "0") : 0;
       
+      // Also check for completed trades in the database to ensure accuracy
+      const completedTrades = await this.getCompletedTrades(assetId);
+      const tradesWithPnL = completedTrades.filter(trade => 
+        trade.pnl && Math.abs(parseFloat(trade.pnl)) > 0.01
+      );
+      
+      // If we have completed trades but no realized P&L, sync the data
+      if (tradesWithPnL.length > 0 && Math.abs(realizedPnl) < 0.01) {
+        const totalTradesPnL = tradesWithPnL.reduce((sum, trade) => 
+          sum + parseFloat(trade.pnl || "0"), 0
+        );
+        console.log(`🔄 Syncing realized P&L for asset ${assetId}: $${totalTradesPnL.toFixed(2)}`);
+        await this.addRealizedPnl(assetId, totalTradesPnL);
+        // Recalculate with updated data
+        const updatedPnl = await this.getPersistentPnl(assetId);
+        const updatedRealized = updatedPnl ? parseFloat(updatedPnl.realizedPnl?.toString() || "0") : totalTradesPnL;
+        const updatedTotal = updatedPnl ? parseFloat(updatedPnl.totalPnl || "0") : totalTradesPnL;
+        
+        const totalTrades = tradesWithPnL.length;
+        const winRate = totalTrades > 0 ? tradesWithPnL.filter(t => parseFloat(t.pnl || "0") > 0).length / totalTrades : 0;
+        const wins = tradesWithPnL.filter(t => parseFloat(t.pnl || "0") > 0);
+        const losses = tradesWithPnL.filter(t => parseFloat(t.pnl || "0") < 0);
+        const averageWin = wins.length > 0 ? wins.reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0) / wins.length : 0;
+        const averageLoss = losses.length > 0 ? losses.reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0) / losses.length : 0;
+        
+        console.log(`🎯 Asset ${assetId}: Realized P&L $${updatedRealized.toFixed(2)}, Win Rate ${(winRate * 100).toFixed(0)}%, Total Trades: ${totalTrades}`);
+        
+        return {
+          totalPnl: updatedTotal,
+          winRate,
+          sharpeRatio: updatedRealized > 0 ? 1.5 : -0.5,
+          totalTrades,
+          drawdown: updatedRealized < 0 ? Math.abs(updatedRealized) : 0,
+          averageWin,
+          averageLoss,
+        };
+      }
+      
       // Check if this asset has completed trades by looking at realized P&L
       if (Math.abs(realizedPnl) < 0.01) {
         // No completed trades yet
@@ -598,17 +636,20 @@ export class DatabaseStorage implements IStorage {
         };
       }
 
-      // For assets with meaningful realized P&L, we consider them as having 1 completed trade cycle
-      // This is more accurate than trying to count individual trades which may not have P&L properly set
-      const totalTrades = 1; // One complete trading cycle (realized P&L represents the result)
-      const winRate = realizedPnl > 0 ? 1 : 0; // 100% if profitable, 0% if losing
-      const averageWin = realizedPnl > 0 ? realizedPnl : 0;
-      const averageLoss = realizedPnl < 0 ? realizedPnl : 0;
+      // For assets with meaningful realized P&L, calculate from actual completed trades
+      const totalTrades = tradesWithPnL.length || 1;
+      const winRate = tradesWithPnL.length > 0 ? 
+        tradesWithPnL.filter(t => parseFloat(t.pnl || "0") > 0).length / tradesWithPnL.length : 
+        (realizedPnl > 0 ? 1 : 0);
       
-      console.log(`🎯 Asset ${assetId}: Realized P&L $${realizedPnl.toFixed(2)}, Win Rate ${(winRate * 100).toFixed(0)}%`);
+      const wins = tradesWithPnL.filter(t => parseFloat(t.pnl || "0") > 0);
+      const losses = tradesWithPnL.filter(t => parseFloat(t.pnl || "0") < 0);
+      const averageWin = wins.length > 0 ? wins.reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0) / wins.length : (realizedPnl > 0 ? realizedPnl : 0);
+      const averageLoss = losses.length > 0 ? losses.reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0) / losses.length : (realizedPnl < 0 ? realizedPnl : 0);
+      
+      console.log(`🎯 Asset ${assetId}: Realized P&L $${realizedPnl.toFixed(2)}, Win Rate ${(winRate * 100).toFixed(0)}%, Total Trades: ${totalTrades}`);
 
-      // Simple Sharpe ratio calculation - for one trade, it's just the return
-      // In a real scenario with multiple trades, this would be more sophisticated
+      // Simple Sharpe ratio calculation
       const sharpeRatio = realizedPnl > 0 ? 1.5 : -0.5; // Simplified Sharpe for win/loss
       
       // Drawdown is the negative P&L if any
