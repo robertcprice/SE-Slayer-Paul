@@ -25,7 +25,9 @@ export const tradingAssets = pgTable("trading_assets", {
 export const trades = pgTable("trades", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assetId: varchar("asset_id").references(() => tradingAssets.id),
-  timestamp: timestamp("timestamp").defaultNow(),
+  timestamp: timestamp("timestamp").defaultNow(), // Legacy field for backwards compatibility
+  openedAt: timestamp("opened_at").defaultNow(), // When trade was opened
+  closedAt: timestamp("closed_at"), // When trade was closed (null if still open)
   action: text("action").notNull(), // BUY, SELL, HOLD
   quantity: decimal("quantity", { precision: 18, scale: 8 }),
   price: decimal("price", { precision: 18, scale: 2 }),
@@ -36,6 +38,7 @@ export const trades = pgTable("trades", {
   aiDecision: jsonb("ai_decision"),
   executionResult: jsonb("execution_result"),
   pnl: decimal("pnl", { precision: 18, scale: 2 }),
+  status: text("status").notNull().default("open"), // 'open' or 'closed'
 });
 
 export const positions = pgTable("positions", {

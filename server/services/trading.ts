@@ -188,7 +188,10 @@ export class TradingService {
         action: trade.action,
         quantity: trade.quantity || "0",
         price: trade.price || "0",
-        timestamp: (trade.timestamp || new Date()).toISOString(),
+        timestamp: (trade.openedAt || trade.timestamp || new Date()).toISOString(),
+        openedAt: (trade.openedAt || trade.timestamp || new Date()).toISOString(),
+        closedAt: trade.closedAt ? trade.closedAt.toISOString() : null,
+        status: trade.status || (trade.closedAt ? "closed" : "open"),
         pnl: parseFloat(trade.pnl || "0"),
         aiReasoning: trade.aiReasoning || "No reasoning provided",
       }))
