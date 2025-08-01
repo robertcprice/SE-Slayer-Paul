@@ -334,6 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paused: asset?.isPaused || false,
         interval: asset?.interval || 300,
         asset: assetSymbol,
+        timestamp: Date.now(), // Force cache invalidation
       };
 
       const messageStr = JSON.stringify(message);
