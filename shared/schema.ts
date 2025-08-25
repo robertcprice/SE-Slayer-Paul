@@ -285,4 +285,6 @@ export type WebSocketMessage = {
   paused?: boolean;
   asset?: string;
   accountBalance?: AccountBalance;
+  // Optional timestamp used by clients to bust caches
+  timestamp?: number;
 };

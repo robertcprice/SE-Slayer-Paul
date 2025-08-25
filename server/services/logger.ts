@@ -1,4 +1,5 @@
-interface LogEntry {
+// Exported so other modules can type their log handling correctly
+export interface LogEntry {
   timestamp: string;
   level: 'info' | 'error' | 'warn' | 'debug' | 'request';
   message: string;
