@@ -285,9 +285,9 @@ export class DatabaseStorage implements IStorage {
       );
       
       // Initialize persistent P&L tracking for this asset if not exists
-      const persistentPnl = await this.getPersistentPnl(trade.assetId);
+      const persistentPnl = await this.getPersistentPnl(trade.assetId!);
       if (!persistentPnl) {
-        await this.initializePersistentPnl(trade.assetId);
+        await this.initializePersistentPnl(trade.assetId!);
         console.log(`💾 Initialized persistent P&L tracking for asset ${trade.assetId}`);
       }
       
@@ -321,7 +321,7 @@ export class DatabaseStorage implements IStorage {
         );
         
         // CRITICAL: Automatically sync persistent P&L when trade is completed
-        await this.addRealizedPnl(updatedTrade.assetId, pnl);
+        await this.addRealizedPnl(updatedTrade.assetId!, pnl);
         console.log(`🔄 Auto-synced persistent P&L for asset ${updatedTrade.assetId}: +$${pnl.toFixed(2)}`);
       }
       
@@ -471,7 +471,7 @@ export class DatabaseStorage implements IStorage {
             const executedQuantity = result.executedQuantity || parseFloat(trade.quantity || "0");
             
             // Get positions to estimate entry price (simplified calculation)
-            const positions = await this.getPositionsByAsset(trade.assetId);
+              const positions = await this.getPositionsByAsset(trade.assetId!);
             const closedPositions = positions.filter(p => !p.isOpen);
             
             if (closedPositions.length > 0) {
@@ -605,8 +605,8 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get persistent P&L data which contains the real win/loss information
       const persistentPnl = await this.getPersistentPnl(assetId);
-      const totalPnl = persistentPnl ? parseFloat(persistentPnl.totalPnl || "0") : 0;
-      const realizedPnl = persistentPnl ? parseFloat(persistentPnl.realizedPnl?.toString() || "0") : 0;
+        const totalPnl = persistentPnl ? parseFloat(persistentPnl.totalPnl?.toString() || "0") : 0;
+        const realizedPnl = persistentPnl ? parseFloat(persistentPnl.realizedPnl?.toString() || "0") : 0;
       
       // Also check for completed trades in the database to ensure accuracy
       const completedTrades = await this.getCompletedTrades(assetId);
@@ -623,8 +623,8 @@ export class DatabaseStorage implements IStorage {
         await this.addRealizedPnl(assetId, totalTradesPnL);
         // Recalculate with updated data
         const updatedPnl = await this.getPersistentPnl(assetId);
-        const updatedRealized = updatedPnl ? parseFloat(updatedPnl.realizedPnl?.toString() || "0") : totalTradesPnL;
-        const updatedTotal = updatedPnl ? parseFloat(updatedPnl.totalPnl || "0") : totalTradesPnL;
+          const updatedRealized = updatedPnl ? parseFloat(updatedPnl.realizedPnl?.toString() || "0") : totalTradesPnL;
+          const updatedTotal = updatedPnl ? parseFloat(updatedPnl.totalPnl?.toString() || "0") : totalTradesPnL;
         
         const totalTrades = tradesWithPnL.length;
         const winRate = totalTrades > 0 ? tradesWithPnL.filter(t => parseFloat(t.pnl || "0") > 0).length / totalTrades : 0;

@@ -10,6 +10,7 @@ import { db } from "./db";
 import { backtestResults, marketData, trades, aiReflections, aiDecisionLogs } from "@shared/schema";
 import type { WebSocketMessage } from "@shared/schema";
 import { logger, type LogEntry } from "./services/logger";
+import { registerTamagotchiRoutes, subscribeTamagotchi, unsubscribeTamagotchi } from "./services/tamagotchi";
 
 const tradingService = new TradingService();
 const wsClients = new Map<string, Set<WebSocket>>();
@@ -81,6 +82,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Register Tamagotchi webhook route
+  registerTamagotchiRoutes(app);
+
 
 
   // AI Decision Logs API
@@ -136,9 +140,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const asset of assets) {
         // Get persistent P&L instead of just current positions
         const persistentPnl = await storage.getPersistentPnl(asset.id);
-        if (persistentPnl) {
-          totalPnl += parseFloat(persistentPnl.totalPnl || "0");
-        }
+          if (persistentPnl) {
+            totalPnl += parseFloat(persistentPnl.totalPnl?.toString() || "0");
+          }
         
         // Get trade statistics
         const trades = await storage.getTradesByAsset(asset.id);
@@ -198,6 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`WebSocket connection established`);
     let currentAsset: string | null = null;
     let isConsoleSubscriber = false;
+    let isTamagotchiSubscriber = false;
     let logUnsubscribe: (() => void) | null = null;
 
     // Handle client subscription to specific assets or console logs
@@ -207,37 +212,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (message.action === 'subscribe' && message.asset) {
           // Unsubscribe from previous asset if any
-          if (currentAsset) {
-            const clients = wsClients.get(currentAsset);
-            if (clients) {
-              clients.delete(ws);
-              if (clients.size === 0) {
-                wsClients.delete(currentAsset);
-                stopTradingLoop(currentAsset);
+            if (currentAsset) {
+              const clients = wsClients.get(currentAsset);
+              if (clients) {
+                clients.delete(ws);
+                if (clients.size === 0) {
+                  wsClients.delete(currentAsset);
+                  stopTradingLoop(currentAsset);
+                }
               }
             }
-          }
 
           // Subscribe to new asset
-          currentAsset = message.asset;
-          console.log(`Client subscribed to asset: ${currentAsset}`);
+            currentAsset = message.asset;
+            console.log(`Client subscribed to asset: ${currentAsset}`);
 
-          // Add client to asset's client set
-          if (!wsClients.has(currentAsset)) {
-            wsClients.set(currentAsset, new Set());
-          }
-          wsClients.get(currentAsset)!.add(ws);
+            // Add client to asset's client set
+            if (!wsClients.has(currentAsset!)) {
+              wsClients.set(currentAsset!, new Set());
+            }
+            wsClients.get(currentAsset!)!.add(ws);
 
-          // Start trading loop for this asset if not already running
-          startTradingLoop(currentAsset);
+            // Start trading loop for this asset if not already running
+            startTradingLoop(currentAsset!);
 
-          // Send initial data
-          sendDashboardUpdate(currentAsset);
+            // Send initial data
+            sendDashboardUpdate(currentAsset!);
         } else if (message.action === 'subscribe_console') {
           // Subscribe to console logs
           isConsoleSubscriber = true;
           consoleClients.add(ws);
-          
+
           // Set up real-time log streaming
           logUnsubscribe = logger.subscribe((log) => {
             if (ws.readyState === WebSocket.OPEN) {
@@ -256,6 +261,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
 
           console.log(`Client subscribed to console logs`);
+        } else if (message.action === 'subscribe_tamagotchi') {
+          isTamagotchiSubscriber = true;
+          subscribeTamagotchi(ws);
         } else if (currentAsset) {
           // Handle other WebSocket messages for the subscribed asset
           await handleWebSocketMessage(currentAsset, message);
@@ -289,6 +297,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (logUnsubscribe) {
           logUnsubscribe();
         }
+      }
+
+      if (isTamagotchiSubscriber) {
+        unsubscribeTamagotchi(ws);
       }
     });
 
@@ -324,18 +336,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dashboardData = await tradingService.getDashboardData(assetSymbol);
       const asset = await tradingService.getAsset(assetSymbol);
       
-      const message: WebSocketMessage = {
-        stats: dashboardData.stats,
-        chart: dashboardData.chart,
-        positions: dashboardData.positions,
-        feed: dashboardData.feed,
-        reflection: dashboardData.reflection?.reflection,
-        improvements: dashboardData.reflection?.improvements,
-        paused: asset?.isPaused || false,
-        interval: asset?.interval || 300,
-        asset: assetSymbol,
-        timestamp: Date.now(), // Force cache invalidation
-      };
+          const message: WebSocketMessage & { timestamp: number } = {
+            stats: dashboardData.stats,
+            chart: dashboardData.chart,
+            positions: dashboardData.positions,
+            feed: dashboardData.feed,
+            reflection: dashboardData.reflection?.reflection,
+            improvements: dashboardData.reflection?.improvements,
+            paused: asset?.isPaused || false,
+            interval: asset?.interval || 300,
+            asset: assetSymbol,
+            timestamp: Date.now(), // Force cache invalidation
+          };
 
       const messageStr = JSON.stringify(message);
       
@@ -1247,7 +1259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get the asset
-      const asset = await storage.getTradingAsset(position.assetId);
+        const asset = await storage.getTradingAsset(position.assetId!);
       if (!asset) {
         return res.status(404).json({ error: "Asset not found" });
       }
@@ -1278,12 +1290,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reflections: await storage.getAllReflections(),
         marketData: await storage.getAllMarketData(),
         backtestResults: await storage.getBacktestResults(),
-        stats: {}
+        stats: {} as Record<string, any>
       };
 
       // Calculate stats for each asset before reset
       const assets = await storage.getTradingAssets();
-      exportData.stats = {};
       for (const asset of assets) {
         exportData.stats[asset.symbol] = await storage.calculateStats(asset.id);
       }

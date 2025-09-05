@@ -69,8 +69,8 @@ export class AISchedulerService {
       console.log(`🔍 Generating AI strategy analysis for ${asset.symbol}...`);
       
       // Get recent trades for analysis
-      const recentTrades = await storage.getTradesByAsset(asset.id, 50);
-      const actualTrades = recentTrades.filter(t => t.action === "BUY" || t.action === "SELL");
+        const recentTradesRaw = await storage.getTradesByAsset(asset.id, 50);
+        const actualTrades = recentTradesRaw.filter(t => t.action === "BUY" || t.action === "SELL");
       
       if (actualTrades.length < 3) {
         console.log(`⏳ Not enough trading data for ${asset.symbol} reflection (${actualTrades.length} trades)`);
@@ -96,37 +96,35 @@ export class AISchedulerService {
         .reduce((sum, t) => sum + parseFloat(t.pnl || "0"), 0) / losses : 0;
 
       // Generate AI reflection
-      const reflection = await generateReflection({
-        symbol: asset.symbol,
-        timeframe: "2h",
-        totalTrades: actualTrades.length,
-        winRate,
+      const recentTrades = actualTrades.slice(0, 10).map(t => ({
+        action: t.action,
+        price: parseFloat(t.price || "0"),
+        quantity: parseFloat(t.quantity || "0"),
+        pnl: parseFloat(t.pnl || "0"),
+        timestamp: t.timestamp || new Date().toISOString(),
+        reasoning: t.aiReasoning || ""
+      }));
+
+      const stats = {
         totalPnl,
-        avgWin,
-        avgLoss,
-        recentTrades: actualTrades.slice(0, 10).map(t => ({
-          action: t.action,
-          price: parseFloat(t.price || "0"),
-          quantity: parseFloat(t.quantity || "0"),
-          pnl: parseFloat(t.pnl || "0"),
-          timestamp: t.timestamp || new Date().toISOString(),
-          reasoning: t.aiReasoning || ""
-        }))
-      });
+        winRate,
+        totalTrades: actualTrades.length,
+        averageWin: avgWin,
+        averageLoss: avgLoss
+      };
+
+      const reflection = await generateReflection(
+        asset.symbol,
+        recentTrades,
+        stats
+      );
 
       // Store reflection in database
       await storage.createReflection({
         assetId: asset.id,
         reflection: reflection.reflection,
         improvements: reflection.improvements,
-        performanceMetrics: {
-          totalTrades: actualTrades.length,
-          winRate,
-          totalPnl,
-          avgWin,
-          avgLoss
-        },
-        timestamp: new Date().toISOString()
+        summary: stats
       });
 
       console.log(`✅ AI strategy analysis completed for ${asset.symbol}`);
