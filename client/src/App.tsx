@@ -8,6 +8,7 @@ import AiLogsPage from "@/pages/ai-logs";
 import Admin from "@/pages/admin";
 import StrategyEditor from "@/pages/strategy-editor";
 import Backtesting from "@/pages/backtesting";
+import TamagotchiPage from "@/pages/tamagotchi";
 import NotFound from "@/pages/not-found";
 import { Navigation } from "@/components/Navigation";
 
@@ -22,6 +23,7 @@ function Router() {
         <Route path="/admin" component={Admin} />
         <Route path="/strategy-editor" component={StrategyEditor} />
         <Route path="/backtesting" component={Backtesting} />
+        <Route path="/tamagotchi" component={TamagotchiPage} />
         <Route component={NotFound} />
       </Switch>
     </>
