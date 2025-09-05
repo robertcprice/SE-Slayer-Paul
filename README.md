@@ -1,5 +1,13 @@
 # AI Trading Bot System
 
+## Tamagotchi Trading Companion (Experimental)
+
+The project now includes the foundation for a tamagotchi-style
+character that reacts to trading performance. TradingView Pine Script
+alerts should POST to `/api/tamagotchi/event` and any client page
+subscribed to the tamagotchi WebSocket channel will animate the
+character accordingly.
+
 ## How to Run
 
 ### Option 1: Running on Replit (Easiest)

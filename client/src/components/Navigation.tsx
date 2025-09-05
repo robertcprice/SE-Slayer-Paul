@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Database, Settings, FileEdit, BarChart3 } from "lucide-react";
+import { TrendingUp, Database, Settings, FileEdit, BarChart3, PawPrint } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -49,13 +49,24 @@ export function Navigation() {
             </Link>
             
             <Link href="/backtesting">
-              <Button 
-                variant={location === "/backtesting" ? "default" : "ghost"} 
+              <Button
+                variant={location === "/backtesting" ? "default" : "ghost"}
                 size="sm"
                 className={`flex items-center gap-2 ${location === "/backtesting" ? "bg-blue-600 text-white" : "text-white/90 hover:text-white hover:bg-white/10"}`}
               >
                 <BarChart3 className="h-4 w-4" />
                 Backtesting
+              </Button>
+            </Link>
+
+            <Link href="/tamagotchi">
+              <Button
+                variant={location === "/tamagotchi" ? "default" : "ghost"}
+                size="sm"
+                className={`flex items-center gap-2 ${location === "/tamagotchi" ? "bg-blue-600 text-white" : "text-white/90 hover:text-white hover:bg-white/10"}`}
+              >
+                <PawPrint className="h-4 w-4" />
+                Tamagotchi
               </Button>
             </Link>
             

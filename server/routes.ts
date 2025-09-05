@@ -10,6 +10,7 @@ import { db } from "./db";
 import { backtestResults, marketData, trades, aiReflections, aiDecisionLogs } from "@shared/schema";
 import type { WebSocketMessage } from "@shared/schema";
 import { logger, type LogEntry } from "./services/logger";
+import { registerTamagotchiRoutes, subscribeTamagotchi, unsubscribeTamagotchi } from "./services/tamagotchi";
 
 const tradingService = new TradingService();
 const wsClients = new Map<string, Set<WebSocket>>();
@@ -80,6 +81,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get portfolio history" });
     }
   });
+
+  // Register Tamagotchi webhook route
+  registerTamagotchiRoutes(app);
 
 
 
@@ -198,6 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`WebSocket connection established`);
     let currentAsset: string | null = null;
     let isConsoleSubscriber = false;
+    let isTamagotchiSubscriber = false;
     let logUnsubscribe: (() => void) | null = null;
 
     // Handle client subscription to specific assets or console logs
@@ -237,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Subscribe to console logs
           isConsoleSubscriber = true;
           consoleClients.add(ws);
-          
+
           // Set up real-time log streaming
           logUnsubscribe = logger.subscribe((log) => {
             if (ws.readyState === WebSocket.OPEN) {
@@ -256,6 +261,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }));
 
           console.log(`Client subscribed to console logs`);
+        } else if (message.action === 'subscribe_tamagotchi') {
+          isTamagotchiSubscriber = true;
+          subscribeTamagotchi(ws);
         } else if (currentAsset) {
           // Handle other WebSocket messages for the subscribed asset
           await handleWebSocketMessage(currentAsset, message);
@@ -289,6 +297,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (logUnsubscribe) {
           logUnsubscribe();
         }
+      }
+
+      if (isTamagotchiSubscriber) {
+        unsubscribeTamagotchi(ws);
       }
     });
 
@@ -1278,12 +1290,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reflections: await storage.getAllReflections(),
         marketData: await storage.getAllMarketData(),
         backtestResults: await storage.getBacktestResults(),
-        stats: {}
+        stats: {} as Record<string, any>
       };
 
       // Calculate stats for each asset before reset
       const assets = await storage.getTradingAssets();
-      exportData.stats = {};
       for (const asset of assets) {
         exportData.stats[asset.symbol] = await storage.calculateStats(asset.id);
       }
