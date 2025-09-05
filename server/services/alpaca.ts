@@ -404,7 +404,7 @@ export class AlpacaClient {
           closedPositions.push(position);
           console.log(`✅ Successfully closed Alpaca position: ${position.symbol}`);
           
-        } catch (positionError) {
+        } catch (positionError: any) {
           console.error(`❌ Failed to close position ${position.symbol}:`, positionError.message);
           // Continue with other positions even if one fails
         }
@@ -413,7 +413,7 @@ export class AlpacaClient {
       console.log(`🎯 Alpaca account reset: Closed ${closedPositions.length}/${positions.length} positions`);
       return closedPositions;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Critical error in closeAllPositions:', error.message);
       
       // If we can't even get positions, throw the error to be handled upstream

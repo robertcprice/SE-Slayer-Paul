@@ -337,6 +337,45 @@ export class TradingService {
     }
   }
 
+  async closePosition(position: Position, asset: TradingAsset): Promise<{ trade: Trade }> {
+    try {
+      const quantity = parseFloat(position.quantity || '0');
+      const entryPrice = parseFloat(position.avgEntryPrice || '0');
+      const currentPrice = entryPrice; // Placeholder - real implementation would fetch market price
+      const pnl = (currentPrice - entryPrice) * quantity;
+
+      const trade = await storage.createTrade({
+        assetId: asset.id,
+        action: position.side === 'long' ? 'SELL' : 'BUY',
+        quantity: position.quantity || '0',
+        price: currentPrice.toString(),
+        positionSizing: '0',
+        stopLoss: null,
+        takeProfit: null,
+        aiReasoning: 'MANUAL CLOSE',
+        aiDecision: { manual: true, action: 'CLOSE' },
+        executionResult: {
+          status: 'FILLED',
+          orderId: `close_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          executedPrice: currentPrice,
+          executedQuantity: quantity,
+          manual: true
+        },
+        pnl: pnl.toFixed(2),
+        status: 'closed',
+        closedAt: new Date()
+      });
+
+      await storage.updateTradeStatus(trade.id, 'closed', pnl, new Date());
+
+      return { trade };
+    } catch (error) {
+      console.error('Error closing position:', error);
+      throw error;
+    }
+  }
+
   async pauseAsset(assetSymbol: string): Promise<void> {
     const asset = await storage.getTradingAssetBySymbol(assetSymbol);
     if (asset) {

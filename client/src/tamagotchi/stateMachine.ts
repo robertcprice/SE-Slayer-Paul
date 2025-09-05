@@ -19,15 +19,19 @@ export const tradingCharacterMachine = createMachine({
         TRADE_SUCCESS: {
           target: 'celebrating',
           actions: assign({
-            happiness: ({ context }) => Math.min(100, context.happiness + 20),
-            confidence: ({ context }) => Math.min(100, context.confidence + 15)
+
+            happiness: ({ context }: any) => Math.min(100, context.happiness + 20),
+            confidence: ({ context }: any) => Math.min(100, context.confidence + 15)
+
           })
         },
         TRADE_LOSS: {
           target: 'concerned',
           actions: assign({
-            happiness: ({ context }) => Math.max(0, context.happiness - 10),
-            confidence: ({ context }) => Math.max(0, context.confidence - 20)
+
+            happiness: ({ context }: any) => Math.max(0, context.happiness - 10),
+            confidence: ({ context }: any) => Math.max(0, context.confidence - 20)
+
           })
         },
         MARKET_ANALYSIS: 'analyzing',

@@ -1,4 +1,4 @@
-interface LogEntry {
+export interface LogEntry {
   timestamp: string;
   level: 'info' | 'error' | 'warn' | 'debug' | 'request';
   message: string;
