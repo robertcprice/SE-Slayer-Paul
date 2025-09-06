@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixiJS v7 Style Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        #canvas-container {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #333;
+            margin: 20px 0;
+            background: white;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background: #fff;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 PixiJS v7 Style Test</h1>
+    <div id="status">Loading...</div>
+    <div id="canvas-container"></div>
+    <button onclick="testRedSquare()">Test Red Square</button>
+    <button onclick="testBlueCircle()">Test Blue Circle</button>
+
+    <script type="module">
+        import * as PIXI from 'https://cdn.skypack.dev/pixi.js@8';
+
+        let app;
+        let container;
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            console.log(message);
+        }
+
+        async function initPixi() {
+            try {
+                updateStatus('Initializing PixiJS with v7-style API...');
+                
+                // Try the old API first
+                app = new PIXI.Application({
+                    width: 200,
+                    height: 200,
+                    backgroundAlpha: 0
+                });
+                
+                container = document.getElementById('canvas-container');
+                
+                // Check what view property exists
+                if (app.view) {
+                    container.appendChild(app.view);
+                    updateStatus('✅ PixiJS initialized with app.view');
+                } else if (app.canvas) {
+                    container.appendChild(app.canvas);
+                    updateStatus('✅ PixiJS initialized with app.canvas');
+                } else {
+                    updateStatus('❌ Neither app.view nor app.canvas found');
+                    console.log('App object:', app);
+                    return;
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ Error with v7 style: ${error.message}`);
+                console.error('PixiJS initialization error:', error);
+                
+                // Try v8 style as fallback
+                try {
+                    updateStatus('Trying v8 style API...');
+                    app = new PIXI.Application();
+                    await app.init({
+                        width: 200,
+                        height: 200,
+                        backgroundAlpha: 0
+                    });
+                    
+                    container.appendChild(app.canvas);
+                    updateStatus('✅ PixiJS initialized with v8 style');
+                    
+                } catch (v8Error) {
+                    updateStatus(`❌ v8 style also failed: ${v8Error.message}`);
+                }
+            }
+        }
+
+        window.testRedSquare = function() {
+            if (!app) {
+                updateStatus('❌ PixiJS not initialized');
+                return;
+            }
+
+            try {
+                app.stage.removeChildren();
+                
+                const graphics = new PIXI.Graphics();
+                graphics.beginFill(0xff0000);
+                graphics.drawRect(50, 50, 100, 100);
+                graphics.endFill();
+                
+                app.stage.addChild(graphics);
+                updateStatus('✅ Red square rendered');
+                
+            } catch (error) {
+                updateStatus(`❌ Error rendering square: ${error.message}`);
+                console.error(error);
+            }
+        };
+
+        window.testBlueCircle = function() {
+            if (!app) {
+                updateStatus('❌ PixiJS not initialized');
+                return;
+            }
+
+            try {
+                app.stage.removeChildren();
+                
+                const graphics = new PIXI.Graphics();
+                graphics.beginFill(0x0000ff);
+                graphics.drawCircle(100, 100, 50);
+                graphics.endFill();
+                
+                app.stage.addChild(graphics);
+                updateStatus('✅ Blue circle rendered');
+                
+            } catch (error) {
+                updateStatus(`❌ Error rendering circle: ${error.message}`);
+                console.error(error);
+            }
+        };
+
+        // Initialize when page loads
+        initPixi();
+    </script>
+</body>
+</html>

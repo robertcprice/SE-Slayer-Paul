@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Tamagotchi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .debug-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        #tamagotchi-container {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin: 20px auto;
+            background: #fff;
+            position: relative;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        #debug-log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🐛 Debug Tamagotchi Animation</h1>
+        
+        <div id="tamagotchi-container">
+            <div id="fallback-display" style="text-align: center; padding-top: 80px; color: #999;">
+                Loading...
+            </div>
+        </div>
+        
+        <div>
+            <button onclick="testBasicPixi()">Test Basic PIXI</button>
+            <button onclick="testAssetLoad()">Test Asset Loading</button>
+            <button onclick="testAnimation('idle')">Test Idle</button>
+            <button onclick="testAnimation('celebrating')">Test Celebrating</button>
+            <button onclick="playTestAnimation()">Play Test Animation</button>
+        </div>
+    </div>
+    
+    <div class="debug-container">
+        <h3>Debug Log</h3>
+        <div id="debug-log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        let app;
+        let loadedAssets;
+        let animations = new Map();
+        let currentAnimation = null;
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEl = document.getElementById('debug-log');
+            logEl.textContent += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('debug-log').textContent = '';
+        }
+
+        async function testBasicPixi() {
+            log('Testing basic PIXI setup...');
+            
+            try {
+                // Import PIXI from the installed package
+                const PIXI = await import('/node_modules/pixi.js/dist/esm/pixi.mjs');
+                log('✅ PIXI imported successfully');
+                log(`PIXI version: ${PIXI.VERSION || 'unknown'}`);
+                
+                if (app) {
+                    app.destroy(true);
+                }
+                
+                app = new PIXI.Application();
+                
+                await app.init({
+                    width: 200,
+                    height: 200,
+                    backgroundAlpha: 0,
+                });
+                
+                log('✅ PIXI Application created and initialized');
+                
+                const container = document.getElementById('tamagotchi-container');
+                const fallback = document.getElementById('fallback-display');
+                
+                if (fallback) {
+                    fallback.remove();
+                }
+                
+                container.appendChild(app.canvas);
+                log('✅ Canvas added to DOM');
+                
+                // Draw a simple test rectangle
+                const graphics = new PIXI.Graphics();
+                graphics.beginFill(0xff0000);
+                graphics.drawRect(50, 50, 100, 100);
+                graphics.endFill();
+                app.stage.addChild(graphics);
+                
+                log('✅ Test red square added to stage');
+                
+            } catch (error) {
+                log(`❌ Error in basic PIXI test: ${error.message}`);
+                log(`Stack: ${error.stack}`);
+            }
+        }
+
+        async function testAssetLoad() {
+            log('Testing asset loading...');
+            
+            try {
+                if (!app) {
+                    log('❌ App not initialized, running basic PIXI test first...');
+                    await testBasicPixi();
+                    return;
+                }
+                
+                const PIXI = await import('/node_modules/pixi.js/dist/esm/pixi.mjs');
+                
+                // Test if assets are accessible
+                log('Testing asset URLs...');
+                
+                const jsonResponse = await fetch('/assets/trader-character.json');
+                if (!jsonResponse.ok) {
+                    log(`❌ JSON asset failed: ${jsonResponse.status}`);
+                    return;
+                }
+                const jsonData = await jsonResponse.json();
+                log('✅ JSON asset loaded successfully');
+                log(`JSON contains ${Object.keys(jsonData.frames).length} frames`);
+                log(`Animations: ${Object.keys(jsonData.animations).join(', ')}`);
+                
+                const pngResponse = await fetch('/assets/trader-character.png');
+                if (!pngResponse.ok) {
+                    log(`❌ PNG asset failed: ${pngResponse.status}`);
+                    return;
+                }
+                log('✅ PNG asset accessible');
+                
+                // Try loading with PIXI Assets
+                log('Loading assets with PIXI...');
+                loadedAssets = await PIXI.Assets.load('/assets/trader-character.json');
+                log('✅ Assets loaded with PIXI.Assets.load');
+                log(`Loaded asset keys: ${Object.keys(loadedAssets).join(', ')}`);
+                
+                if (loadedAssets.animations) {
+                    log(`Available animations: ${Object.keys(loadedAssets.animations).join(', ')}`);
+                } else {
+                    log('❌ No animations found in loaded assets');
+                }
+                
+            } catch (error) {
+                log(`❌ Error loading assets: ${error.message}`);
+                log(`Stack: ${error.stack}`);
+            }
+        }
+
+        async function testAnimation(animationName) {
+            log(`Testing animation: ${animationName}`);
+            
+            try {
+                if (!loadedAssets) {
+                    log('❌ Assets not loaded, loading first...');
+                    await testAssetLoad();
+                    return;
+                }
+                
+                const PIXI = await import('/node_modules/pixi.js/dist/esm/pixi.mjs');
+                
+                if (!loadedAssets.animations || !loadedAssets.animations[animationName]) {
+                    log(`❌ Animation '${animationName}' not found`);
+                    return;
+                }
+                
+                // Clear current animation
+                if (currentAnimation) {
+                    currentAnimation.stop();
+                    app.stage.removeChild(currentAnimation);
+                }
+                app.stage.removeChildren();
+                
+                // Create new animated sprite
+                const animSprite = new PIXI.AnimatedSprite(loadedAssets.animations[animationName]);
+                animSprite.animationSpeed = 0.167;
+                animSprite.loop = true;
+                animSprite.anchor.set(0.5, 0.5);
+                animSprite.x = 100;
+                animSprite.y = 100;
+                
+                app.stage.addChild(animSprite);
+                animSprite.play();
+                
+                currentAnimation = animSprite;
+                
+                log(`✅ Animation '${animationName}' started`);
+                log(`Sprite position: (${animSprite.x}, ${animSprite.y})`);
+                log(`Sprite size: ${animSprite.width}x${animSprite.height}`);
+                
+            } catch (error) {
+                log(`❌ Error testing animation: ${error.message}`);
+                log(`Stack: ${error.stack}`);
+            }
+        }
+
+        async function playTestAnimation() {
+            log('Playing test color animation...');
+            
+            try {
+                if (!app) {
+                    await testBasicPixi();
+                    return;
+                }
+                
+                const PIXI = await import('/node_modules/pixi.js/dist/esm/pixi.mjs');
+                
+                // Clear stage
+                app.stage.removeChildren();
+                
+                // Create a simple animated graphics object
+                const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
+                let colorIndex = 0;
+                
+                const graphics = new PIXI.Graphics();
+                app.stage.addChild(graphics);
+                
+                const animate = () => {
+                    graphics.clear();
+                    graphics.beginFill(colors[colorIndex]);
+                    graphics.drawCircle(100, 100, 30);
+                    graphics.endFill();
+                    
+                    colorIndex = (colorIndex + 1) % colors.length;
+                };
+                
+                // Start animation
+                app.ticker.add(animate);
+                
+                // Stop after 5 seconds
+                setTimeout(() => {
+                    app.ticker.remove(animate);
+                    log('✅ Test animation completed');
+                }, 5000);
+                
+                log('✅ Test color animation started (5 second duration)');
+                
+            } catch (error) {
+                log(`❌ Error in test animation: ${error.message}`);
+            }
+        }
+
+        // Auto-start debugging
+        log('Debug page loaded, ready for testing');
+        log('Click "Test Basic PIXI" to start debugging');
+    </script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tamagotchi Animation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: #e9ecef;
+        }
+        #tamagotchi-container {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin: 20px auto;
+            background: #fff;
+        }
+        .webhook-test {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Tamagotchi Animation Test</h1>
+        
+        <div id="tamagotchi-container"></div>
+        
+        <div class="status">
+            <strong>Status:</strong> <span id="status">Initializing...</span>
+        </div>
+        
+        <div class="controls">
+            <h3>Manual Animation Tests</h3>
+            <button onclick="playAnimation('idle')">Idle</button>
+            <button onclick="playAnimation('celebrating')">Celebrating</button>
+            <button onclick="playAnimation('worried')">Worried</button>
+            <button onclick="playAnimation('analyzing')">Analyzing</button>
+            <button onclick="playAnimation('sleeping')">Sleeping</button>
+        </div>
+        
+        <div class="webhook-test">
+            <h3>Webhook Event Tests</h3>
+            <button onclick="sendWebhook('TRADE_SUCCESS')">🎉 Trade Success</button>
+            <button onclick="sendWebhook('TRADE_LOSS')">😟 Trade Loss</button>
+            <button onclick="sendWebhook('MARKET_ANALYSIS')">🔍 Market Analysis</button>
+            <button onclick="sendWebhook('SLEEP_TIME')">😴 Sleep Time</button>
+            <button onclick="sendWebhook('WAKE_UP')">☀️ Wake Up</button>
+        </div>
+        
+        <div class="status">
+            <h4>WebSocket Events:</h4>
+            <pre id="events"></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Application, Assets, AnimatedSprite } from 'https://cdn.skypack.dev/pixi.js@8';
+
+        let app;
+        let sprite;
+        let animations = new Map();
+        let currentAnimation = null;
+        let ws;
+
+        async function initializePixi() {
+            try {
+                app = new Application({
+                    width: 200,
+                    height: 200,
+                    backgroundAlpha: 0,
+                });
+
+                const container = document.getElementById('tamagotchi-container');
+                container.appendChild(app.view);
+
+                // Load sprite sheet
+                const sheet = await Assets.load('/assets/trader-character.json');
+                console.log('Loaded sprite sheet:', sheet);
+                
+                setupAnimations(sheet);
+                updateStatus('Ready! Animations loaded successfully.');
+                
+                // Start with idle animation
+                playAnimation('idle');
+                
+            } catch (error) {
+                console.error('Failed to initialize Pixi:', error);
+                updateStatus('Error: ' + error.message);
+            }
+        }
+
+        function setupAnimations(sheet) {
+            const states = ['idle', 'celebrating', 'worried', 'analyzing', 'sleeping'];
+            
+            states.forEach(state => {
+                if (sheet.animations && sheet.animations[state]) {
+                    const anim = new AnimatedSprite(sheet.animations[state]);
+                    anim.animationSpeed = 0.167; // ~10 FPS
+                    anim.loop = true;
+                    anim.anchor.set(0.5, 0.5);
+                    anim.x = 100;
+                    anim.y = 100;
+                    animations.set(state, anim);
+                    console.log('Created animation for:', state);
+                }
+            });
+        }
+
+        function playAnimation(state) {
+            console.log('Playing animation:', state);
+            const next = animations.get(state) || animations.get('idle');
+            if (!next || next === currentAnimation) return;
+
+            if (currentAnimation) {
+                currentAnimation.stop();
+                app.stage.removeChild(currentAnimation);
+            }
+            
+            currentAnimation = next;
+            app.stage.addChild(currentAnimation);
+            currentAnimation.play();
+            
+            updateStatus(`Playing: ${state}`);
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            console.log('Status:', message);
+        }
+
+        function addEvent(message) {
+            const eventsEl = document.getElementById('events');
+            eventsEl.textContent += new Date().toLocaleTimeString() + ': ' + message + '\\n';
+            eventsEl.scrollTop = eventsEl.scrollHeight;
+        }
+
+        async function sendWebhook(type) {
+            try {
+                const response = await fetch('/api/tamagotchi/event', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ type, data: { test: true } })
+                });
+                
+                const result = await response.json();
+                addEvent(`Sent webhook: ${type} - ${JSON.stringify(result)}`);
+                updateStatus(`Webhook sent: ${type}`);
+            } catch (error) {
+                addEvent(`Webhook error: ${error.message}`);
+                updateStatus(`Webhook error: ${error.message}`);
+            }
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+            
+            ws.onopen = () => {
+                addEvent('WebSocket connected');
+                ws.send(JSON.stringify({ action: 'subscribe_tamagotchi' }));
+                addEvent('Subscribed to tamagotchi events');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    addEvent(`Received: ${JSON.stringify(msg)}`);
+                    
+                    if (msg.type === 'tamagotchi_event') {
+                        const eventType = msg.event.type;
+                        addEvent(`Tamagotchi event: ${eventType}`);
+                        
+                        // Map events to animations
+                        switch(eventType) {
+                            case 'TRADE_SUCCESS':
+                                playAnimation('celebrating');
+                                break;
+                            case 'TRADE_LOSS':
+                                playAnimation('worried');
+                                break;
+                            case 'MARKET_ANALYSIS':
+                                playAnimation('analyzing');
+                                break;
+                            case 'SLEEP_TIME':
+                                playAnimation('sleeping');
+                                break;
+                            case 'WAKE_UP':
+                                playAnimation('idle');
+                                break;
+                        }
+                    }
+                } catch (error) {
+                    addEvent(`WebSocket parse error: ${error.message}`);
+                }
+            };
+            
+            ws.onclose = () => {
+                addEvent('WebSocket disconnected');
+            };
+            
+            ws.onerror = (error) => {
+                addEvent(`WebSocket error: ${error.message || 'Connection failed'}`);
+            };
+        }
+
+        // Make functions global for button onclick handlers
+        window.playAnimation = playAnimation;
+        window.sendWebhook = sendWebhook;
+
+        // Initialize everything
+        initializePixi();
+        connectWebSocket();
+    </script>
+</body>
+</html>

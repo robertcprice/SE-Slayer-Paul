@@ -26,7 +26,7 @@ export const tradingCharacterMachine = createMachine({
           })
         },
         TRADE_LOSS: {
-          target: 'concerned',
+          target: 'worried',
           actions: assign({
 
             happiness: ({ context }: any) => Math.max(0, context.happiness - 10),
@@ -41,7 +41,7 @@ export const tradingCharacterMachine = createMachine({
     celebrating: {
       after: { 3000: 'idle' }
     },
-    concerned: {
+    worried: {
       after: { 5000: 'idle' }
     },
     analyzing: {

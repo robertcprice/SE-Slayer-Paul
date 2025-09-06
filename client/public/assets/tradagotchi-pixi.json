@@ -1,0 +1,1543 @@
+{
+  "frames": {
+    "tradagotchi_0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_1": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_2": {
+      "frame": {
+        "x": 1024,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_3": {
+      "frame": {
+        "x": 1536,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_4": {
+      "frame": {
+        "x": 2048,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_5": {
+      "frame": {
+        "x": 2560,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_6": {
+      "frame": {
+        "x": 3072,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_7": {
+      "frame": {
+        "x": 3584,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_8": {
+      "frame": {
+        "x": 4096,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_9": {
+      "frame": {
+        "x": 4608,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_10": {
+      "frame": {
+        "x": 5120,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_11": {
+      "frame": {
+        "x": 5632,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_12": {
+      "frame": {
+        "x": 6144,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_13": {
+      "frame": {
+        "x": 6656,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_14": {
+      "frame": {
+        "x": 7168,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_15": {
+      "frame": {
+        "x": 7680,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_16": {
+      "frame": {
+        "x": 8192,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_17": {
+      "frame": {
+        "x": 8704,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_18": {
+      "frame": {
+        "x": 9216,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_19": {
+      "frame": {
+        "x": 9728,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_20": {
+      "frame": {
+        "x": 10240,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_21": {
+      "frame": {
+        "x": 10752,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_22": {
+      "frame": {
+        "x": 11264,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_23": {
+      "frame": {
+        "x": 11776,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_24": {
+      "frame": {
+        "x": 12288,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_25": {
+      "frame": {
+        "x": 12800,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_26": {
+      "frame": {
+        "x": 13312,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_27": {
+      "frame": {
+        "x": 13824,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_28": {
+      "frame": {
+        "x": 14336,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_29": {
+      "frame": {
+        "x": 14848,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_30": {
+      "frame": {
+        "x": 15360,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_31": {
+      "frame": {
+        "x": 15872,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_32": {
+      "frame": {
+        "x": 16384,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_33": {
+      "frame": {
+        "x": 16896,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_34": {
+      "frame": {
+        "x": 17408,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_35": {
+      "frame": {
+        "x": 17920,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_36": {
+      "frame": {
+        "x": 18432,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_37": {
+      "frame": {
+        "x": 18944,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_38": {
+      "frame": {
+        "x": 19456,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_39": {
+      "frame": {
+        "x": 19968,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_40": {
+      "frame": {
+        "x": 20480,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_41": {
+      "frame": {
+        "x": 20992,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_42": {
+      "frame": {
+        "x": 21504,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_43": {
+      "frame": {
+        "x": 22016,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_44": {
+      "frame": {
+        "x": 22528,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_45": {
+      "frame": {
+        "x": 23040,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_46": {
+      "frame": {
+        "x": 23552,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_47": {
+      "frame": {
+        "x": 24064,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_48": {
+      "frame": {
+        "x": 24576,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_49": {
+      "frame": {
+        "x": 25088,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_50": {
+      "frame": {
+        "x": 25600,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_51": {
+      "frame": {
+        "x": 26112,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_52": {
+      "frame": {
+        "x": 26624,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_53": {
+      "frame": {
+        "x": 27136,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_54": {
+      "frame": {
+        "x": 27648,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_55": {
+      "frame": {
+        "x": 28160,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_56": {
+      "frame": {
+        "x": 28672,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_57": {
+      "frame": {
+        "x": 29184,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_58": {
+      "frame": {
+        "x": 29696,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_59": {
+      "frame": {
+        "x": 30208,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_60": {
+      "frame": {
+        "x": 30720,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_61": {
+      "frame": {
+        "x": 31232,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_62": {
+      "frame": {
+        "x": 31744,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_63": {
+      "frame": {
+        "x": 32256,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_64": {
+      "frame": {
+        "x": 32768,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    },
+    "tradagotchi_65": {
+      "frame": {
+        "x": 33280,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 512
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      }
+    }
+  },
+  "animations": {
+    "idle": [
+      "tradagotchi_0",
+      "tradagotchi_1",
+      "tradagotchi_2",
+      "tradagotchi_3",
+      "tradagotchi_4",
+      "tradagotchi_5",
+      "tradagotchi_6",
+      "tradagotchi_7",
+      "tradagotchi_8",
+      "tradagotchi_9",
+      "tradagotchi_10",
+      "tradagotchi_11",
+      "tradagotchi_12",
+      "tradagotchi_13",
+      "tradagotchi_14",
+      "tradagotchi_15",
+      "tradagotchi_16",
+      "tradagotchi_17",
+      "tradagotchi_18",
+      "tradagotchi_19",
+      "tradagotchi_20",
+      "tradagotchi_21",
+      "tradagotchi_22",
+      "tradagotchi_23",
+      "tradagotchi_24",
+      "tradagotchi_25",
+      "tradagotchi_26",
+      "tradagotchi_27",
+      "tradagotchi_28",
+      "tradagotchi_29",
+      "tradagotchi_30",
+      "tradagotchi_31",
+      "tradagotchi_32",
+      "tradagotchi_33",
+      "tradagotchi_34",
+      "tradagotchi_35",
+      "tradagotchi_36",
+      "tradagotchi_37",
+      "tradagotchi_38",
+      "tradagotchi_39",
+      "tradagotchi_40",
+      "tradagotchi_41",
+      "tradagotchi_42",
+      "tradagotchi_43",
+      "tradagotchi_44",
+      "tradagotchi_45",
+      "tradagotchi_46",
+      "tradagotchi_47",
+      "tradagotchi_48",
+      "tradagotchi_49",
+      "tradagotchi_50",
+      "tradagotchi_51",
+      "tradagotchi_52",
+      "tradagotchi_53",
+      "tradagotchi_54",
+      "tradagotchi_55",
+      "tradagotchi_56",
+      "tradagotchi_57",
+      "tradagotchi_58",
+      "tradagotchi_59",
+      "tradagotchi_60",
+      "tradagotchi_61",
+      "tradagotchi_62",
+      "tradagotchi_63",
+      "tradagotchi_64",
+      "tradagotchi_65"
+    ],
+    "celebrating": [
+      "tradagotchi_0",
+      "tradagotchi_1",
+      "tradagotchi_2",
+      "tradagotchi_3",
+      "tradagotchi_4",
+      "tradagotchi_5",
+      "tradagotchi_6",
+      "tradagotchi_7",
+      "tradagotchi_8",
+      "tradagotchi_9",
+      "tradagotchi_10",
+      "tradagotchi_11",
+      "tradagotchi_12",
+      "tradagotchi_13",
+      "tradagotchi_14",
+      "tradagotchi_15",
+      "tradagotchi_16",
+      "tradagotchi_17",
+      "tradagotchi_18",
+      "tradagotchi_19",
+      "tradagotchi_20",
+      "tradagotchi_21",
+      "tradagotchi_22",
+      "tradagotchi_23",
+      "tradagotchi_24",
+      "tradagotchi_25",
+      "tradagotchi_26",
+      "tradagotchi_27",
+      "tradagotchi_28",
+      "tradagotchi_29",
+      "tradagotchi_30",
+      "tradagotchi_31",
+      "tradagotchi_32",
+      "tradagotchi_33",
+      "tradagotchi_34",
+      "tradagotchi_35",
+      "tradagotchi_36",
+      "tradagotchi_37",
+      "tradagotchi_38",
+      "tradagotchi_39",
+      "tradagotchi_40",
+      "tradagotchi_41",
+      "tradagotchi_42",
+      "tradagotchi_43",
+      "tradagotchi_44",
+      "tradagotchi_45",
+      "tradagotchi_46",
+      "tradagotchi_47",
+      "tradagotchi_48",
+      "tradagotchi_49",
+      "tradagotchi_50",
+      "tradagotchi_51",
+      "tradagotchi_52",
+      "tradagotchi_53",
+      "tradagotchi_54",
+      "tradagotchi_55",
+      "tradagotchi_56",
+      "tradagotchi_57",
+      "tradagotchi_58",
+      "tradagotchi_59",
+      "tradagotchi_60",
+      "tradagotchi_61",
+      "tradagotchi_62",
+      "tradagotchi_63",
+      "tradagotchi_64",
+      "tradagotchi_65"
+    ],
+    "worried": [
+      "tradagotchi_0",
+      "tradagotchi_1",
+      "tradagotchi_2",
+      "tradagotchi_3",
+      "tradagotchi_4",
+      "tradagotchi_5",
+      "tradagotchi_6",
+      "tradagotchi_7",
+      "tradagotchi_8",
+      "tradagotchi_9",
+      "tradagotchi_10",
+      "tradagotchi_11",
+      "tradagotchi_12",
+      "tradagotchi_13",
+      "tradagotchi_14",
+      "tradagotchi_15",
+      "tradagotchi_16",
+      "tradagotchi_17",
+      "tradagotchi_18",
+      "tradagotchi_19",
+      "tradagotchi_20",
+      "tradagotchi_21",
+      "tradagotchi_22",
+      "tradagotchi_23",
+      "tradagotchi_24",
+      "tradagotchi_25",
+      "tradagotchi_26",
+      "tradagotchi_27",
+      "tradagotchi_28",
+      "tradagotchi_29",
+      "tradagotchi_30",
+      "tradagotchi_31",
+      "tradagotchi_32",
+      "tradagotchi_33",
+      "tradagotchi_34",
+      "tradagotchi_35",
+      "tradagotchi_36",
+      "tradagotchi_37",
+      "tradagotchi_38",
+      "tradagotchi_39",
+      "tradagotchi_40",
+      "tradagotchi_41",
+      "tradagotchi_42",
+      "tradagotchi_43",
+      "tradagotchi_44",
+      "tradagotchi_45",
+      "tradagotchi_46",
+      "tradagotchi_47",
+      "tradagotchi_48",
+      "tradagotchi_49",
+      "tradagotchi_50",
+      "tradagotchi_51",
+      "tradagotchi_52",
+      "tradagotchi_53",
+      "tradagotchi_54",
+      "tradagotchi_55",
+      "tradagotchi_56",
+      "tradagotchi_57",
+      "tradagotchi_58",
+      "tradagotchi_59",
+      "tradagotchi_60",
+      "tradagotchi_61",
+      "tradagotchi_62",
+      "tradagotchi_63",
+      "tradagotchi_64",
+      "tradagotchi_65"
+    ],
+    "analyzing": [
+      "tradagotchi_0",
+      "tradagotchi_1",
+      "tradagotchi_2",
+      "tradagotchi_3",
+      "tradagotchi_4",
+      "tradagotchi_5",
+      "tradagotchi_6",
+      "tradagotchi_7",
+      "tradagotchi_8",
+      "tradagotchi_9",
+      "tradagotchi_10",
+      "tradagotchi_11",
+      "tradagotchi_12",
+      "tradagotchi_13",
+      "tradagotchi_14",
+      "tradagotchi_15",
+      "tradagotchi_16",
+      "tradagotchi_17",
+      "tradagotchi_18",
+      "tradagotchi_19",
+      "tradagotchi_20",
+      "tradagotchi_21",
+      "tradagotchi_22",
+      "tradagotchi_23",
+      "tradagotchi_24",
+      "tradagotchi_25",
+      "tradagotchi_26",
+      "tradagotchi_27",
+      "tradagotchi_28",
+      "tradagotchi_29",
+      "tradagotchi_30",
+      "tradagotchi_31",
+      "tradagotchi_32",
+      "tradagotchi_33",
+      "tradagotchi_34",
+      "tradagotchi_35",
+      "tradagotchi_36",
+      "tradagotchi_37",
+      "tradagotchi_38",
+      "tradagotchi_39",
+      "tradagotchi_40",
+      "tradagotchi_41",
+      "tradagotchi_42",
+      "tradagotchi_43",
+      "tradagotchi_44",
+      "tradagotchi_45",
+      "tradagotchi_46",
+      "tradagotchi_47",
+      "tradagotchi_48",
+      "tradagotchi_49",
+      "tradagotchi_50",
+      "tradagotchi_51",
+      "tradagotchi_52",
+      "tradagotchi_53",
+      "tradagotchi_54",
+      "tradagotchi_55",
+      "tradagotchi_56",
+      "tradagotchi_57",
+      "tradagotchi_58",
+      "tradagotchi_59",
+      "tradagotchi_60",
+      "tradagotchi_61",
+      "tradagotchi_62",
+      "tradagotchi_63",
+      "tradagotchi_64",
+      "tradagotchi_65"
+    ],
+    "sleeping": [
+      "tradagotchi_0",
+      "tradagotchi_1",
+      "tradagotchi_2",
+      "tradagotchi_3",
+      "tradagotchi_4",
+      "tradagotchi_5",
+      "tradagotchi_6",
+      "tradagotchi_7",
+      "tradagotchi_8",
+      "tradagotchi_9",
+      "tradagotchi_10",
+      "tradagotchi_11",
+      "tradagotchi_12",
+      "tradagotchi_13",
+      "tradagotchi_14",
+      "tradagotchi_15",
+      "tradagotchi_16",
+      "tradagotchi_17",
+      "tradagotchi_18",
+      "tradagotchi_19",
+      "tradagotchi_20",
+      "tradagotchi_21",
+      "tradagotchi_22",
+      "tradagotchi_23",
+      "tradagotchi_24",
+      "tradagotchi_25",
+      "tradagotchi_26",
+      "tradagotchi_27",
+      "tradagotchi_28",
+      "tradagotchi_29",
+      "tradagotchi_30",
+      "tradagotchi_31",
+      "tradagotchi_32",
+      "tradagotchi_33",
+      "tradagotchi_34",
+      "tradagotchi_35",
+      "tradagotchi_36",
+      "tradagotchi_37",
+      "tradagotchi_38",
+      "tradagotchi_39",
+      "tradagotchi_40",
+      "tradagotchi_41",
+      "tradagotchi_42",
+      "tradagotchi_43",
+      "tradagotchi_44",
+      "tradagotchi_45",
+      "tradagotchi_46",
+      "tradagotchi_47",
+      "tradagotchi_48",
+      "tradagotchi_49",
+      "tradagotchi_50",
+      "tradagotchi_51",
+      "tradagotchi_52",
+      "tradagotchi_53",
+      "tradagotchi_54",
+      "tradagotchi_55",
+      "tradagotchi_56",
+      "tradagotchi_57",
+      "tradagotchi_58",
+      "tradagotchi_59",
+      "tradagotchi_60",
+      "tradagotchi_61",
+      "tradagotchi_62",
+      "tradagotchi_63",
+      "tradagotchi_64",
+      "tradagotchi_65"
+    ]
+  },
+  "meta": {
+    "image": "tradagotchi.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 33792,
+      "h": 512
+    },
+    "scale": "1"
+  }
+}
