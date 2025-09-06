@@ -41,7 +41,10 @@ export class TradingCharacter {
       }
       
     } catch (v7Error) {
-      console.log('🎮 TradingCharacter: v7 API failed, trying v8 API:', v7Error.message);
+      console.log(
+        '🎮 TradingCharacter: v7 API failed, trying v8 API:',
+        (v7Error as Error).message,
+      );
       
       // Try v8 style API as fallback
       this.app = new Application();
